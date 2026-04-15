@@ -1,0 +1,264 @@
+'use client';
+import { useEffect, useState, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import Navbar from '@/components/Navbar';
+import { requireAuth, apiFetch } from '@/lib/auth';
+
+const EMPTY_FORM = { username: '', password: '', role: '', name: '', email: '', phoneNumber: '' };
+
+export default function UserAccountManagement() {
+  const router = useRouter();
+  const [user, setUser] = useState(null);
+  const [users, setUsers] = useState([]);
+  const [profiles, setProfiles] = useState([]);
+  const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [modal, setModal] = useState(null); // null | { mode: 'create'|'edit', data: {} }
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [modalAlert, setModalAlert] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [detailUser, setDetailUser] = useState(null);
+  const searchTimer = useRef(null);
+
+  function displayUserAdminPage() {
+    const u = requireAuth('user_admin');
+    if (u) { setUser(u); viewUserAccount(); fetchProfiles(); }
+  }
+
+  useEffect(() => { displayUserAdminPage(); }, []);
+
+  async function viewUserAccount() {
+    setLoading(true);
+    try {
+      const res = await apiFetch('/api/users/view');
+      const data = await res.json();
+      setUsers(data);
+    } catch { setUsers([]); }
+    finally { setLoading(false); }
+  }
+
+  async function fetchProfiles() {
+    try {
+      const res = await apiFetch('/api/user-profiles');
+      const data = await res.json();
+      setProfiles(data);
+    } catch { setProfiles([]); }
+  }
+
+  async function searchUserAccount(val) {
+    setSearch(val);
+    clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(async () => {
+      if (!val.trim()) { viewUserAccount(); return; }
+      setLoading(true);
+      try {
+        const res = await apiFetch(`/api/users/search?search=${encodeURIComponent(val)}`);
+        const data = await res.json();
+        setUsers(data);
+      } catch { setUsers([]); }
+      finally { setLoading(false); }
+    }, 300);
+  }
+
+  function createUserAccount() {
+    setForm(EMPTY_FORM);
+    setModalAlert(null);
+    setModal({ mode: 'create' });
+  }
+
+  function updateUserAccount(u) {
+    setForm({ username: u.username, password: '', role: u.role, name: u.name || '', email: u.email || '', phoneNumber: u.phoneNumber || '', createdAt: u.createdAt, userID: u.userID });
+    setModalAlert(null);
+    setModal({ mode: 'edit', data: u });
+  }
+
+  async function suspendUserAccount(userID, isSuspended) {
+    if (!confirm(`Are you sure you want to ${isSuspended ? 'unsuspend' : 'suspend'} this user?`)) return;
+    try {
+      await apiFetch(`/api/users/${userID}/suspend`, { method: 'PUT' });
+      search.trim() ? searchUserAccount(search) : viewUserAccount();
+    } catch { alert('Failed to update suspension status.'); }
+  }
+
+  async function handleModalSubmit() {
+    setModalAlert(null);
+    if (!form.username || !form.role) { setModalAlert({ type: 'error', msg: 'Username and role are required.' }); return; }
+    if (modal.mode === 'create' && !form.password) { setModalAlert({ type: 'error', msg: 'Password is required for new users.' }); return; }
+
+    setSaving(true);
+    try {
+      const body = { username: form.username, role: form.role, name: form.name, email: form.email, phoneNumber: form.phoneNumber };
+      if (form.password) body.password = form.password;
+
+      const res = await apiFetch(
+        modal.mode === 'edit' ? `/api/users/${form.userID}` : '/api/users',
+        { method: modal.mode === 'edit' ? 'PUT' : 'POST', body: JSON.stringify(body) }
+      );
+      const data = await res.json();
+      if (!res.ok) { setModalAlert({ type: 'error', msg: data.message }); return; }
+      setModal(null);
+      search.trim() ? searchUserAccount(search) : viewUserAccount();
+    } catch { setModalAlert({ type: 'error', msg: 'Server error. Try again.' }); }
+    finally { setSaving(false); }
+  }
+
+  function roleBadgeStyle(role) {
+    const map = { user_admin: '#C9A84C', fundraiser: '#5DCAA5', donee: '#6BAEE8', platform_management: '#C896DC' };
+    const color = map[role] || '#9999BB';
+    return { background: `${color}22`, color, display:'inline-block', padding:'2px 10px', borderRadius:'20px', fontSize:'0.7rem', fontWeight:500, textTransform:'uppercase', letterSpacing:'0.5px' };
+  }
+
+  const selectedProfile = profiles.find(p => p.roleName === form.role);
+
+  if (!user) return null;
+
+  return (
+    <>
+      <Navbar role="User Admin" username={user.name} />
+      <div className="page">
+        <span className="back-link" onClick={() => router.push('/dashboard-admin')}>← Back to Dashboard</span>
+        <h2>User Account Management</h2>
+        <p className="subtitle">Create, view, update, suspend and search user accounts.</p>
+
+        <div className="toolbar">
+          <div className="search-wrap">
+            <span className="search-icon">🔍</span>
+            <input type="text" value={search} onChange={e => searchUserAccount(e.target.value)}
+              placeholder="Search by name, username, ID or role..." />
+          </div>
+          <button className="btn-primary" onClick={createUserAccount}>+ Create User</button>
+        </div>
+
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>User ID</th><th>Name</th><th>Role</th><th>Status</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td colSpan={8} className="loading-cell">Loading...</td></tr>
+              ) : users.length === 0 ? (
+                <tr><td colSpan={8} className="empty-state">No users found.</td></tr>
+              ) : users.map(u => (
+                <tr key={u._id}>
+                  <td><code style={{color:'var(--gold)',fontSize:'0.8rem'}}>{u.userID || '—'}</code></td>
+                  <td>
+                    <span onClick={() => setDetailUser(u)}
+                      style={{cursor:'pointer', color:'var(--text)', borderBottom:'1px dashed var(--muted)', paddingBottom:'1px'}}>
+                      {u.name || '—'}
+                    </span>
+                  </td>
+                  <td><span style={roleBadgeStyle(u.role)}>{u.role}</span></td>
+                  <td><span className={`badge ${u.suspended ? 'badge-suspended' : 'badge-active'}`}>{u.suspended ? 'Suspended' : 'Active'}</span></td>
+                  <td>
+                    <button className="action-btn btn-edit" onClick={() => updateUserAccount(u)}>Edit</button>
+                    <button className={`action-btn ${u.suspended ? 'btn-unsuspend' : 'btn-suspend'}`}
+                      onClick={() => suspendUserAccount(u.userID, u.suspended)}>
+                      {u.suspended ? 'Unsuspend' : 'Suspend'}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+
+      {/* Detail Modal */}
+      {detailUser && (
+        <div className="modal-overlay active" onClick={e => e.target === e.currentTarget && setDetailUser(null)}>
+          <div className="modal">
+            <h3>User Details</h3>
+
+            <div style={{display:'grid', gap:'0.75rem', marginBottom:'1.25rem'}}>
+              {[
+                { label: 'User ID',      value: detailUser.userID },
+                { label: 'Name',         value: detailUser.name || '—' },
+                { label: 'Username',     value: detailUser.username },
+                { label: 'Email',        value: detailUser.email || '—' },
+                { label: 'Phone',        value: detailUser.phoneNumber || '—' },
+                { label: 'Role',         value: detailUser.role },
+                { label: 'Status',       value: detailUser.suspended ? 'Suspended' : 'Active' },
+                { label: 'Date Created', value: new Date(detailUser.createdAt).toLocaleString() },
+              ].map(row => (
+                <div key={row.label} style={{display:'flex', justifyContent:'space-between', alignItems:'center', borderBottom:'1px solid rgba(255,255,255,0.05)', paddingBottom:'0.6rem'}}>
+                  <span style={{fontSize:'0.78rem', color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.6px', fontWeight:500}}>{row.label}</span>
+                  <span style={{fontSize:'0.875rem', color:'var(--text)'}}>{row.value}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="modal-actions">
+              <button className="btn-cancel" onClick={() => setDetailUser(null)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create / Edit Modal */}
+      {modal && (
+        <div className="modal-overlay active" onClick={e => e.target === e.currentTarget && setModal(null)}>
+          <div className="modal">
+            <h3>{modal.mode === 'create' ? 'Create User' : 'Update User'}</h3>
+            {modalAlert && <div className={`modal-alert ${modalAlert.type}`}>{modalAlert.msg}</div>}
+
+            <div className="form-group">
+              <label>Username</label>
+              <input type="text" value={form.username} disabled={modal.mode === 'edit'}
+                style={modal.mode === 'edit' ? {opacity:0.5, cursor:'not-allowed'} : {}}
+                onChange={e => setForm(f => ({...f, username: e.target.value}))} placeholder="e.g. john_doe" />
+            </div>
+            <div className="form-group">
+              <label>Password {modal.mode === 'edit' && <span style={{color:'var(--muted)',fontSize:'0.7rem',textTransform:'none'}}>(leave blank to keep current)</span>}</label>
+              <input type="password" value={form.password} onChange={e => setForm(f => ({...f, password: e.target.value}))} placeholder="Enter password" />
+            </div>
+            <div className="form-group">
+              <label>Role (User Profile)</label>
+              <select value={form.role} onChange={e => setForm(f => ({...f, role: e.target.value}))}>
+                <option value="">Select a role</option>
+                {profiles.map(p => (
+                  <option key={p.roleID} value={p.roleName}>{p.roleName}{p.suspended ? ' (suspended)' : ''}</option>
+                ))}
+              </select>
+              {selectedProfile && (
+                <div className="hint" style={{color: selectedProfile.suspended ? 'var(--error)' : 'var(--muted)'}}>
+                  {selectedProfile.description}{selectedProfile.suspended ? ' — This profile is suspended. The user will be created as suspended.' : ''}
+                </div>
+              )}
+            </div>
+            <div className="form-group">
+              <label>Full Name</label>
+              <input type="text" value={form.name} onChange={e => setForm(f => ({...f, name: e.target.value}))} placeholder="e.g. John Doe" />
+            </div>
+            <div className="form-group">
+              <label>Email</label>
+              <input type="email" value={form.email} onChange={e => setForm(f => ({...f, email: e.target.value}))} placeholder="e.g. john@email.com" />
+            </div>
+            <div className="form-group">
+              <label>Phone Number</label>
+              <input type="text" value={form.phoneNumber} maxLength={8}
+                onChange={e => setForm(f => ({...f, phoneNumber: e.target.value}))} placeholder="e.g. 91234567" />
+              <div className="hint">Must be exactly 8 digits.</div>
+            </div>
+            {modal.mode === 'edit' && (
+              <div className="form-group">
+                <label>Date Created</label>
+                <input type="text" disabled value={new Date(form.createdAt).toLocaleString()} style={{opacity:0.5,cursor:'not-allowed'}} />
+              </div>
+            )}
+
+            <div className="modal-actions">
+              <button className="btn-cancel" onClick={() => setModal(null)}>Cancel</button>
+              <button className="btn-primary" onClick={handleModalSubmit} disabled={saving}>
+                {saving ? 'Saving...' : modal.mode === 'create' ? 'Create User' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
