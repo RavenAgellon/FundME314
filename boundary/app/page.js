@@ -10,8 +10,11 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem('user') || 'null');
-    if (user) redirectByRole(user.role);
+    const userString = localStorage.getItem('user');
+    if (userString) {
+      const user = JSON.parse(userString);
+      redirectByRole(user.role);
+    }
   }, []);
 
   function redirectByRole(role) {
@@ -41,7 +44,6 @@ export default function LoginPage() {
       });
       const data = await res.json();
       if (!res.ok) { setAlert({ type: 'error', msg: data.message || 'Login failed.' }); return; }
-      localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
       setAlert({ type: 'success', msg: `Welcome, ${data.user.name}! Redirecting...` });
       setTimeout(() => redirectByRole(data.user.role), 800);

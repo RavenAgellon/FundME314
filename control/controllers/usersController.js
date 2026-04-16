@@ -1,106 +1,216 @@
 const User = require('../../entity/User');
 
-// #6 — View all users (no search)
+// -------------------------------------------------------
+// VIEW ALL USER ACCOUNTS — User story #6
+// -------------------------------------------------------
 async function viewUserAccount(req, res) {
   try {
-    const users = await User.find({}).select('-password').sort({ createdAt: -1 });
-    res.json(users);
+    // Step 1: Get all users from the database
+    const allUsers = await User.find({});
+
+    // Step 2: Remove the password field from each user for security
+    const usersWithoutPassword = await User.find({}).select('-password');
+
+    // Step 3: Sort by newest first
+    const sortedUsers = await User.find({}).select('-password').sort({ createdAt: -1 });
+
+    // Step 4: Send the list back to the browser
+    res.json(sortedUsers);
+
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 }
 
-// #9 — Search user accounts
+// -------------------------------------------------------
+// SEARCH USER ACCOUNTS — User story #9
+// -------------------------------------------------------
 async function searchUserAccount(req, res) {
   try {
-    const { search } = req.query;
-    if (!search) return res.status(400).json({ message: 'Search query is required' });
+    // Step 1: Get the search term from the URL
+    // Example URL: /api/users/search?search=john
+    const searchTerm = req.query.search;
 
-    const users = await User.find({
+    // Step 2: Make sure a search term was provided
+    if (!searchTerm) {
+      return res.status(400).json({ message: 'Search query is required' });
+    }
+
+    // Step 3: Build the search condition
+    // $or means match ANY of these fields
+    // $regex means search for the term anywhere in the text
+    // $options: 'i' means case insensitive (john = John = JOHN)
+    const searchCondition = {
       $or: [
-        { username: { $regex: search, $options: 'i' } },
-        { name: { $regex: search, $options: 'i' } },
-        { userID: { $regex: search, $options: 'i' } },
-        { role: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } }
+        { username:  { $regex: searchTerm, $options: 'i' } },
+        { name:      { $regex: searchTerm, $options: 'i' } },
+        { userID:    { $regex: searchTerm, $options: 'i' } },
+        { role:      { $regex: searchTerm, $options: 'i' } },
+        { email:     { $regex: searchTerm, $options: 'i' } }
       ]
-    }).select('-password').sort({ createdAt: -1 });
+    };
 
-    res.json(users);
+    // Step 4: Search the database using the condition
+    const matchingUsers = await User.find(searchCondition).select('-password').sort({ createdAt: -1 });
+
+    // Step 5: Send the results back to the browser
+    res.json(matchingUsers);
+
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 }
 
-// #5 — Create a new user account
+// -------------------------------------------------------
+// CREATE USER ACCOUNT — User story #5
+// -------------------------------------------------------
 async function createUserAccount(req, res) {
   try {
-    const { username, password, role, name, email, phoneNumber } = req.body;
+    // Step 1: Read the fields from the request body
+    const username    = req.body.username;
+    const password    = req.body.password;
+    const role        = req.body.role;
+    const name        = req.body.name;
+    const email       = req.body.email;
+    const phoneNumber = req.body.phoneNumber;
 
+    // Step 2: Check that required fields are not empty
     if (!username || !password || !role) {
       return res.status(400).json({ message: 'Username, password and role are required' });
     }
 
-    const existing = await User.findOne({ username });
-    if (existing) return res.status(400).json({ message: 'Username already exists' });
+    // Step 3: Check if the username is already taken
+    const existingUser = await User.findOne({ username: username });
+    if (existingUser) {
+      return res.status(400).json({ message: 'Username already exists' });
+    }
 
-    if (phoneNumber !== undefined && phoneNumber !== '') {
-      if (!/^\d{8}$/.test(phoneNumber)) {
+    // Step 4: Validate phone number if one was provided
+    // It must be exactly 8 digits (e.g. 91234567)
+    if (phoneNumber && phoneNumber !== '') {
+      const phonePattern = /^\d{8}$/;
+      const phoneIsValid = phonePattern.test(phoneNumber);
+      if (!phoneIsValid) {
         return res.status(400).json({ message: 'Phone number must be exactly 8 digits' });
       }
     }
 
-    const user = new User({ username, password, role, name, email, phoneNumber });
-    await user.save();
+    // Step 5: Create a new user object
+    const newUser = new User({
+      username:    username,
+      password:    password,   // will be hashed automatically by entity/User.js
+      role:        role,
+      name:        name,
+      email:       email,
+      phoneNumber: phoneNumber
+    });
 
-    const { password: _, ...userWithoutPassword } = user.toObject();
-    res.status(201).json(userWithoutPassword);
+    // Step 6: Save the new user to the database
+    await newUser.save();
+
+    // Step 7: Return the saved user without the password
+    const savedUser = newUser.toObject();
+    delete savedUser.password;
+    res.status(201).json(savedUser);
+
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 }
 
-// #7 — Update a user account
+// -------------------------------------------------------
+// UPDATE USER ACCOUNT — User story #7
+// -------------------------------------------------------
 async function updateUserAccount(req, res) {
   try {
-    const { name, email, role, password, phoneNumber } = req.body;
+    // Step 1: Get the userID from the URL
+    // Example URL: /api/users/UA-0001
+    const userID = req.params.userID;
 
-    const user = await User.findOne({ userID: req.params.userID });
-    if (!user) return res.status(404).json({ message: 'User not found' });
+    // Step 2: Find the user in the database
+    const user = await User.findOne({ userID: userID });
 
-    if (name !== undefined) user.name = name;
-    if (email !== undefined) user.email = email;
-    if (role !== undefined) user.role = role;
-    if (password && password.trim() !== '') user.password = password;
+    // Step 3: If user not found, return an error
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
 
-    if (phoneNumber !== undefined && phoneNumber !== '') {
-      if (!/^\d{8}$/.test(phoneNumber)) {
+    // Step 4: Update each field if a new value was provided
+    // Note: username and createdAt are NOT updated — they are permanent
+    if (req.body.name !== undefined) {
+      user.name = req.body.name;
+    }
+    if (req.body.email !== undefined) {
+      user.email = req.body.email;
+    }
+    if (req.body.role !== undefined) {
+      user.role = req.body.role;
+    }
+    if (req.body.password && req.body.password.trim() !== '') {
+      user.password = req.body.password;  // will be hashed automatically by entity/User.js
+    }
+
+    // Step 5: Validate and update phone number if provided
+    if (req.body.phoneNumber !== undefined && req.body.phoneNumber !== '') {
+      const phonePattern = /^\d{8}$/;
+      const phoneIsValid = phonePattern.test(req.body.phoneNumber);
+      if (!phoneIsValid) {
         return res.status(400).json({ message: 'Phone number must be exactly 8 digits' });
       }
-      user.phoneNumber = phoneNumber;
-    } else if (phoneNumber === '') {
+      user.phoneNumber = req.body.phoneNumber;
+    } else if (req.body.phoneNumber === '') {
+      // If empty string was sent, clear the phone number
       user.phoneNumber = '';
     }
 
+    // Step 6: Save the updated user to the database
     await user.save();
 
-    const { password: _, ...userWithoutPassword } = user.toObject();
-    res.json(userWithoutPassword);
+    // Step 7: Return the updated user without the password
+    const updatedUser = user.toObject();
+    delete updatedUser.password;
+    res.json(updatedUser);
+
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 }
 
-// #8 — Suspend or unsuspend a user account
+// -------------------------------------------------------
+// SUSPEND USER ACCOUNT — User story #8
+// -------------------------------------------------------
 async function suspendUserAccount(req, res) {
   try {
-    const user = await User.findOne({ userID: req.params.userID });
-    if (!user) return res.status(404).json({ message: 'User not found' });
+    // Step 1: Get the userID from the URL
+    const userID = req.params.userID;
 
-    user.suspended = !user.suspended;
+    // Step 2: Find the user in the database
+    const user = await User.findOne({ userID: userID });
+
+    // Step 3: If user not found, return an error
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Step 4: Toggle the suspended status
+    // If currently suspended → unsuspend
+    // If currently active → suspend
+    if (user.suspended === true) {
+      user.suspended = false;
+    } else {
+      user.suspended = true;
+    }
+
+    // Step 5: Save the change to the database
     await user.save();
 
-    res.json({ message: `User ${user.suspended ? 'suspended' : 'unsuspended'}`, suspended: user.suspended });
+    // Step 6: Send back the result
+    const statusMessage = user.suspended ? 'suspended' : 'unsuspended';
+    res.json({
+      message: 'User ' + statusMessage,
+      suspended: user.suspended
+    });
+
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
   }

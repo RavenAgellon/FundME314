@@ -1,24 +1,49 @@
-const jwt = require('jsonwebtoken');
-
-const JWT_SECRET = process.env.JWT_SECRET || 'fundbridge_secret_key';
-
+// -------------------------------------------------------
+// PROTECT — checks if the user is logged in
+// Reads the userID sent in the request header
+// -------------------------------------------------------
 function protect(req, res, next) {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) return res.status(401).json({ message: 'Not authenticated' });
+  // Step 1: Get the userID from the request header
+  // The boundary sends this with every request after login
+  const userID = req.headers['x-user-id'];
+  const userRole = req.headers['x-user-role'];
 
-  try {
-    req.user = jwt.verify(token, JWT_SECRET);
-    next();
-  } catch {
-    res.status(401).json({ message: 'Invalid or expired token' });
+  // Step 2: If no userID found, the user is not logged in
+  if (!userID || !userRole) {
+    return res.status(401).json({ message: 'Not authenticated' });
   }
+
+  // Step 3: Save the user info to the request
+  // so the next function (controller) can use it
+  req.user = {
+    userID: userID,
+    role:   userRole
+  };
+
+  // Step 4: Move on to the next function (controller)
+  next();
 }
 
-function authorize(...roles) {
-  return (req, res, next) => {
-    if (!roles.includes(req.user.role)) {
+// -------------------------------------------------------
+// AUTHORIZE — checks if the user has the right role
+// -------------------------------------------------------
+function authorize() {
+  // Get the list of allowed roles passed in
+  const allowedRoles = Array.from(arguments);
+
+  return function(req, res, next) {
+    // Step 1: Get the role of the currently logged in user
+    const userRole = req.user.role;
+
+    // Step 2: Check if the user's role is in the allowed list
+    const roleIsAllowed = allowedRoles.includes(userRole);
+
+    // Step 3: If not allowed, stop and return error
+    if (!roleIsAllowed) {
       return res.status(403).json({ message: 'Access denied: insufficient role' });
     }
+
+    // Step 4: Role is allowed, move on to the controller
     next();
   };
 }

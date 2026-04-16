@@ -1,18 +1,12 @@
-this version has completed:
 
-1. User Admin Login
-2. User Admin Logout
-3. User Admin can create user profile
-4. User Admin can update user profile
-5. User Admin can view user profile
-6. User Admin can suspend user profile
-7. User Admin can search user profile
-
-HOW TO START:
+HOW TO RUN THE PROGRAM:
+ensure project folder is in ur own desktop with the following directory
+example of directory:
+C:\Users\Aaron\Desktop\fund-raising-app
 
 1. npm run seed
 2. npm run dev
 
-3. open another cmd
+3. open another terminal
 4. cd 
-5. npm run dev 
+5. npm run dev -- -p 3001

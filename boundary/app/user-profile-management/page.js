@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import { requireAuth, apiFetch } from '@/lib/auth';
@@ -17,7 +17,6 @@ export default function UserProfileManagement() {
   const [modalAlert, setModalAlert] = useState(null);
   const [saving, setSaving] = useState(false);
   const [detailProfile, setDetailProfile] = useState(null);
-  const searchTimer = useRef(null);
 
   function displayUserAdminPage() {
     const u = requireAuth('user_admin');
@@ -29,26 +28,33 @@ export default function UserProfileManagement() {
   async function viewUserProfile() {
     setLoading(true);
     try {
-      const res = await apiFetch('/api/user-profiles/view');
+      const res = await apiFetch('/api/user-profiles/view', 'GET');
       const data = await res.json();
       setProfiles(data);
     } catch { setProfiles([]); }
     finally { setLoading(false); }
   }
 
-  async function searchUserProfile(val) {
-    setSearch(val);
-    clearTimeout(searchTimer.current);
-    searchTimer.current = setTimeout(async () => {
-      if (!val.trim()) { viewUserProfile(); return; }
-      setLoading(true);
-      try {
-        const res = await apiFetch(`/api/user-profiles/search?search=${encodeURIComponent(val)}`);
-        const data = await res.json();
-        setProfiles(data);
-      } catch { setProfiles([]); }
-      finally { setLoading(false); }
-    }, 300);
+  async function searchUserProfile() {
+    // If search box is empty, just load all profiles
+    if (!search.trim()) {
+      viewUserProfile();
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Call the search endpoint with the search term
+      const res = await apiFetch('/api/user-profiles/search?search=' + encodeURIComponent(search), 'GET');
+      const data = await res.json();
+
+      // Show results (may be empty if nothing found)
+      setProfiles(data);
+    } catch (err) {
+      setProfiles([]);
+    } finally {
+      setLoading(false);
+    }
   }
 
   function createUserProfile() {
@@ -66,10 +72,10 @@ export default function UserProfileManagement() {
   async function suspendUserProfile(roleID, isSuspended) {
     if (!confirm(`Are you sure you want to ${isSuspended ? 'unsuspend' : 'suspend'} this profile? This will also ${isSuspended ? 'unsuspend' : 'suspend'} all users with this role.`)) return;
     try {
-      const res = await apiFetch(`/api/user-profiles/${roleID}/suspend`, { method: 'PUT' });
+      const res = await apiFetch('/api/user-profiles/' + roleID + '/suspend', 'PUT');
       const data = await res.json();
       alert(data.message);
-      search.trim() ? searchUserProfile(search) : viewUserProfile();
+      viewUserProfile();
     } catch { alert('Failed to update suspension status.'); }
   }
 
@@ -79,14 +85,13 @@ export default function UserProfileManagement() {
     setSaving(true);
     try {
       const body = { roleName: form.roleName, description: form.description };
-      const res = await apiFetch(
-        modal.mode === 'edit' ? `/api/user-profiles/${form.roleID}` : '/api/user-profiles',
-        { method: modal.mode === 'edit' ? 'PUT' : 'POST', body: JSON.stringify(body) }
-      );
+      const url = modal.mode === 'edit' ? '/api/user-profiles/' + form.roleID : '/api/user-profiles';
+      const method = modal.mode === 'edit' ? 'PUT' : 'POST';
+      const res = await apiFetch(url, method, body);
       const data = await res.json();
       if (!res.ok) { setModalAlert({ type: 'error', msg: data.message }); return; }
       setModal(null);
-      search.trim() ? searchUserProfile(search) : viewUserProfile();
+      viewUserProfile();
     } catch { setModalAlert({ type: 'error', msg: 'Server error. Try again.' }); }
     finally { setSaving(false); }
   }
@@ -104,9 +109,15 @@ export default function UserProfileManagement() {
         <div className="toolbar">
           <div className="search-wrap">
             <span className="search-icon">🔍</span>
-            <input type="text" value={search} onChange={e => searchUserProfile(e.target.value)}
-              placeholder="Search by role name, ID or description..." />
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && searchUserProfile()}
+              placeholder="Search by role name, ID or description..."
+            />
           </div>
+          <button className="btn-primary" onClick={searchUserProfile} style={{marginRight:'0.5rem'}}>Search</button>
           <button className="btn-primary" onClick={createUserProfile}>+ Create Profile</button>
         </div>
 

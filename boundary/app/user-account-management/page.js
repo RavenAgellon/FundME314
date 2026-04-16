@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import { requireAuth, apiFetch } from '@/lib/auth';
@@ -18,7 +18,6 @@ export default function UserAccountManagement() {
   const [modalAlert, setModalAlert] = useState(null);
   const [saving, setSaving] = useState(false);
   const [detailUser, setDetailUser] = useState(null);
-  const searchTimer = useRef(null);
 
   function displayUserAdminPage() {
     const u = requireAuth('user_admin');
@@ -30,7 +29,7 @@ export default function UserAccountManagement() {
   async function viewUserAccount() {
     setLoading(true);
     try {
-      const res = await apiFetch('/api/users/view');
+      const res = await apiFetch('/api/users/view', 'GET');
       const data = await res.json();
       setUsers(data);
     } catch { setUsers([]); }
@@ -39,25 +38,32 @@ export default function UserAccountManagement() {
 
   async function fetchProfiles() {
     try {
-      const res = await apiFetch('/api/user-profiles');
+      const res = await apiFetch('/api/user-profiles/view', 'GET');
       const data = await res.json();
       setProfiles(data);
     } catch { setProfiles([]); }
   }
 
-  async function searchUserAccount(val) {
-    setSearch(val);
-    clearTimeout(searchTimer.current);
-    searchTimer.current = setTimeout(async () => {
-      if (!val.trim()) { viewUserAccount(); return; }
-      setLoading(true);
-      try {
-        const res = await apiFetch(`/api/users/search?search=${encodeURIComponent(val)}`);
-        const data = await res.json();
-        setUsers(data);
-      } catch { setUsers([]); }
-      finally { setLoading(false); }
-    }, 300);
+  async function searchUserAccount() {
+    // If search box is empty, just load all users
+    if (!search.trim()) {
+      viewUserAccount();
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Call the search endpoint with the search term
+      const res = await apiFetch('/api/users/search?search=' + encodeURIComponent(search), 'GET');
+      const data = await res.json();
+
+      // Show results (may be empty if nothing found)
+      setUsers(data);
+    } catch (err) {
+      setUsers([]);
+    } finally {
+      setLoading(false);
+    }
   }
 
   function createUserAccount() {
@@ -75,8 +81,8 @@ export default function UserAccountManagement() {
   async function suspendUserAccount(userID, isSuspended) {
     if (!confirm(`Are you sure you want to ${isSuspended ? 'unsuspend' : 'suspend'} this user?`)) return;
     try {
-      await apiFetch(`/api/users/${userID}/suspend`, { method: 'PUT' });
-      search.trim() ? searchUserAccount(search) : viewUserAccount();
+      await apiFetch('/api/users/' + userID + '/suspend', 'PUT');
+      viewUserAccount();
     } catch { alert('Failed to update suspension status.'); }
   }
 
@@ -90,14 +96,13 @@ export default function UserAccountManagement() {
       const body = { username: form.username, role: form.role, name: form.name, email: form.email, phoneNumber: form.phoneNumber };
       if (form.password) body.password = form.password;
 
-      const res = await apiFetch(
-        modal.mode === 'edit' ? `/api/users/${form.userID}` : '/api/users',
-        { method: modal.mode === 'edit' ? 'PUT' : 'POST', body: JSON.stringify(body) }
-      );
+      const url = modal.mode === 'edit' ? '/api/users/' + form.userID : '/api/users';
+      const method = modal.mode === 'edit' ? 'PUT' : 'POST';
+      const res = await apiFetch(url, method, body);
       const data = await res.json();
       if (!res.ok) { setModalAlert({ type: 'error', msg: data.message }); return; }
       setModal(null);
-      search.trim() ? searchUserAccount(search) : viewUserAccount();
+      viewUserAccount();
     } catch { setModalAlert({ type: 'error', msg: 'Server error. Try again.' }); }
     finally { setSaving(false); }
   }
@@ -123,9 +128,15 @@ export default function UserAccountManagement() {
         <div className="toolbar">
           <div className="search-wrap">
             <span className="search-icon">🔍</span>
-            <input type="text" value={search} onChange={e => searchUserAccount(e.target.value)}
-              placeholder="Search by name, username, ID or role..." />
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && searchUserAccount()}
+              placeholder="Search by name, username, ID or role..."
+            />
           </div>
+          <button className="btn-primary" onClick={searchUserAccount} style={{marginRight:'0.5rem'}}>Search</button>
           <button className="btn-primary" onClick={createUserAccount}>+ Create User</button>
         </div>
 
