@@ -13,6 +13,7 @@ app.use('/api/users', require('./routes/users'));
 app.use('/api/user-profiles', require('./routes/userProfiles'));
 app.use('/api/fra', require('./routes/fra'));
 
+
 // Connect to MongoDB and start server
 mongoose.connect(process.env.MONGO_URI)
   .then(() => {
