@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import { requireAuth } from '@/lib/auth';
 
+// ---- FAKE API ----
 const fakeFetchFRAs = () =>
   Promise.resolve([
     {
@@ -12,6 +13,7 @@ const fakeFetchFRAs = () =>
       target: 5000,
       start: '2024-05-01',
       end: '2024-06-01',
+      suspended: false,
     },
     {
       id: 2,
@@ -20,11 +22,20 @@ const fakeFetchFRAs = () =>
       target: 2000,
       start: '2024-07-01',
       end: '2024-08-01',
+      suspended: false,
     },
   ]);
 
 const fakeCreateFRA = (fra) =>
-  Promise.resolve({ ...fra, id: Math.random() });
+  Promise.resolve({ ...fra, id: Math.random(), suspended: false });
+
+// For demo: simulate updating
+const fakeUpdateFRA = (id, fraUpdate) =>
+  Promise.resolve({ ...fraUpdate, id });
+
+// For demo: simulate suspension
+const fakeSuspendFRA = (id) =>
+  Promise.resolve({ id, suspended: true });
 
 export default function FundraiserDashboard() {
   const [user, setUser] = useState(null);
@@ -38,6 +49,7 @@ export default function FundraiserDashboard() {
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
   const [creating, setCreating] = useState(false);
+  const [editingId, setEditingId] = useState(null); // Track if editing
 
   useEffect(() => {
     const u = requireAuth('fundraiser');
@@ -50,6 +62,7 @@ export default function FundraiserDashboard() {
   function openForm() {
     setShowForm(true);
     setSelectedFRA(null);
+    setEditingId(null);
     setTitle('');
     setDesc('');
     setTarget('');
@@ -57,10 +70,44 @@ export default function FundraiserDashboard() {
     setEnd('');
   }
 
+  function openEditForm(fra) {
+    setShowForm(true);
+    setSelectedFRA(null); // Hide detail
+    setEditingId(fra.id);
+    setTitle(fra.title);
+    setDesc(fra.description);
+    setTarget(fra.target);
+    setStart(fra.start);
+    setEnd(fra.end);
+  }
+
   function handleCreate(e) {
     e.preventDefault();
     setCreating(true);
-    // Could add validation here.
+
+    if (editingId !== null) {
+      // Update existing FRA
+      fakeUpdateFRA(editingId, {
+        title,
+        description: desc,
+        target,
+        start,
+        end,
+        suspended: false,
+      }).then((updatedFRA) => {
+        setFras(fras =>
+          fras.map(fra =>
+            fra.id === editingId ? { ...fra, ...updatedFRA } : fra
+          )
+        );
+        setShowForm(false);
+        setEditingId(null);
+        setCreating(false);
+      });
+      return;
+    }
+
+    // Create new FRA
     fakeCreateFRA({
       title,
       description: desc,
@@ -71,6 +118,19 @@ export default function FundraiserDashboard() {
       setFras([fra, ...fras]);
       setShowForm(false);
       setCreating(false);
+    });
+  }
+
+  function suspendFRA(id) {
+    // For demo: mark FRA as suspended
+    fakeSuspendFRA(id).then(() => {
+      setFras(fras =>
+        fras.map(fra =>
+          fra.id === id ? { ...fra, suspended: true } : fra
+        )
+      );
+      // If currently viewing detail, close it if it was suspended
+      if (selectedFRA && selectedFRA.id === id) setSelectedFRA(null);
     });
   }
 
@@ -94,7 +154,9 @@ export default function FundraiserDashboard() {
         {showForm && (
           <div className="modal-overlay active" style={{ display: 'flex' }}>
             <div className="modal" style={{ maxWidth: 540 }}>
-              <h3 style={{ marginBottom: '1.25rem' }}>Create Fundraising Activity</h3>
+              <h3 style={{ marginBottom: '1.25rem' }}>
+                {editingId !== null ? 'Edit Fundraising Activity' : 'Create Fundraising Activity'}
+              </h3>
               <form onSubmit={handleCreate}>
                 <div className="form-group">
                   <label htmlFor="fra-title">Title</label>
@@ -147,11 +209,14 @@ export default function FundraiserDashboard() {
                   />
                 </div>
                 <div className="modal-actions" style={{ justifyContent: 'space-between' }}>
-                  <button type="button" className="btn-cancel" onClick={() => setShowForm(false)}>
+                  <button type="button" className="btn-cancel" onClick={() => {
+                    setShowForm(false);
+                    setEditingId(null);
+                  }}>
                     Cancel
                   </button>
                   <button type="submit" className="btn-primary" disabled={creating}>
-                    {creating ? 'Creating...' : 'Create'}
+                    {creating ? (editingId !== null ? 'Updating...' : 'Creating...') : (editingId !== null ? 'Update' : 'Create')}
                   </button>
                 </div>
               </form>
@@ -172,21 +237,75 @@ export default function FundraiserDashboard() {
                   <div
                     key={fra.id}
                     className="menu-card"
-                    onClick={() => setSelectedFRA(fra)}
+                    onClick={e => {
+                      // Prevent card click if clicking Edit/Suspend
+                      if (e.target.closest('.action-btn')) return;
+                      if (fra.suspended) return; // Prevent showing details if suspended
+                      setSelectedFRA(fra);
+                    }}
                     style={{
-                      background: selectedFRA && selectedFRA.id === fra.id ? 'var(--gold-light)' : undefined,
-                      border: selectedFRA && selectedFRA.id === fra.id ? '2px solid var(--gold)' : undefined,
+                      background: fra.suspended
+                        ? 'rgba(240,112,112,0.11)'
+                        : (selectedFRA && selectedFRA.id === fra.id ? 'var(--gold-light)' : undefined),
+                      border: fra.suspended
+                        ? '2px solid var(--error)'
+                        : (selectedFRA && selectedFRA.id === fra.id ? '2px solid var(--gold)' : undefined),
+                      opacity: fra.suspended ? 0.7 : 1,
+                      filter: fra.suspended ? 'grayscale(0.6)' : undefined,
+                      pointerEvents: fra.suspended ? 'none' : 'inherit',
                       transition: 'all 0.15s',
                       minHeight: 180,
+                      position: 'relative'
                     }}
                   >
-                    <div className="card-icon" style={{ background: 'var(--gold-light)', fontSize: 23 }}>📄</div>
-                    <h3>{fra.title}</h3>
+                    <div
+                      className="card-icon"
+                      style={{
+                        background: fra.suspended
+                          ? 'rgba(240,112,112,0.12)'
+                          : 'var(--gold-light)',
+                        fontSize: 23
+                      }}
+                    >📄</div>
+                    <h3>
+                      {fra.title}
+                      {fra.suspended && (
+                        <span className="badge badge-suspended" style={{ marginLeft: 10 }}>Suspended</span>
+                      )}
+                    </h3>
                     <p>{fra.description}</p>
                     <div style={{ fontSize: '0.9rem', marginTop: 8, color: 'var(--muted)' }}>
                       🎯 {fra.target} &nbsp; &nbsp; 🗓 {fra.start} → {fra.end}
                     </div>
                     <div className="card-arrow" style={{ marginTop: 10 }}>View →</div>
+                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: 16 }}>
+                      <button
+                        type="button"
+                        className="action-btn btn-edit"
+                        style={{ borderRadius: 20 }} // Rounded
+                        onClick={e => {
+                          e.stopPropagation();
+                          openEditForm(fra);
+                        }}
+                        aria-label="Edit fundraising activity"
+                        disabled={fra.suspended}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        className="action-btn btn-suspend"
+                        style={{ borderRadius: 20 }} // Rounded
+                        onClick={e => {
+                          e.stopPropagation();
+                          suspendFRA(fra.id);
+                        }}
+                        aria-label="Suspend fundraising activity"
+                        disabled={fra.suspended}
+                      >
+                        Suspend
+                      </button>
+                    </div>
                   </div>
                 ))
               )}
