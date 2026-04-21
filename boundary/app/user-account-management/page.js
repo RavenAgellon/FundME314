@@ -4,6 +4,114 @@ import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import { requireAuth, apiFetch } from '@/lib/auth';
 
+// ======================= DUMMY DATA & FUNCTIONS START  =======================
+
+// Dummy data for user accounts (in-memory array)
+let dummyUsers = [
+  {
+    _id: '1',
+    userID: 1,
+    username: "alice",
+    password: "test23",
+    role: "user_admin",
+    name: "Alice Lim",
+    email: "alice@demo.com",
+    phoneNumber: "12345678",
+    suspended: false,
+    createdAt: "2026-04-01",
+  },
+  {
+    _id: '2',
+    userID: 2,
+    username: "bob",
+    password: "test45",
+    role: "fundraiser",
+    name: "Bob Lee",
+    email: "bob@demo.com",
+    phoneNumber: "87654321",
+    suspended: false,
+    createdAt: "2026-03-15",
+  },
+  {
+    _id: '3',
+    userID: 3,
+    username: "charlie",
+    password: "test67",
+    role: "donee",
+    name: "Charlie Kim",
+    email: "charlie@demo.com",
+    phoneNumber: "55555555",
+    suspended: true,
+    createdAt: "2026-02-20",
+  },
+];
+
+// Dummy fetch all users
+function fakeFetchUsers() {
+  return Promise.resolve([...dummyUsers]);
+}
+
+// Dummy search users
+function fakeSearchUsers(search) {
+  if (!search.trim()) return fakeFetchUsers();
+  const term = search.trim().toLowerCase();
+  return Promise.resolve(
+    dummyUsers.filter(
+      u =>
+        u.username.toLowerCase().includes(term) ||
+        (u.name && u.name.toLowerCase().includes(term)) ||
+        (u.userID && u.userID.toString().includes(term)) ||
+        (u.role && u.role.toLowerCase().includes(term))
+    )
+  );
+}
+
+// Dummy create user
+function fakeCreateUser({ username, password, role, name, email, phoneNumber }) {
+  const newUser = {
+    _id: (dummyUsers.length + 1).toString(),
+    userID: dummyUsers.length + 1,
+    username,
+    password,
+    role,
+    name,
+    email,
+    phoneNumber,
+    suspended: false,
+    createdAt: new Date().toISOString(),
+  };
+  dummyUsers.push(newUser);
+  return Promise.resolve(newUser);
+}
+
+// Dummy update user
+function fakeUpdateUser(userID, { role, name, email, phoneNumber, password }) {
+  const idx = dummyUsers.findIndex(u => u.userID === userID);
+  if (idx === -1) return Promise.reject(new Error('User not found'));
+  dummyUsers[idx] = {
+    ...dummyUsers[idx],
+    role,
+    name,
+    email,
+    phoneNumber,
+    ...(password ? { password } : {}),
+  };
+  return Promise.resolve(dummyUsers[idx]);
+}
+
+// Dummy suspend/unsuspend user
+function fakeSuspendUser(userID, isSuspended) {
+  const idx = dummyUsers.findIndex(u => u.userID === userID);
+  if (idx === -1) return Promise.reject(new Error('User not found'));
+  dummyUsers[idx] = {
+    ...dummyUsers[idx],
+    suspended: !isSuspended,
+  };
+  return Promise.resolve(dummyUsers[idx]);
+}
+
+// ======================= DUMMY DATA & FUNCTIONS END =======================
+
 const EMPTY_FORM = { username: '', password: '', role: '', name: '', email: '', phoneNumber: '' };
 
 export default function UserAccountManagement() {
@@ -30,6 +138,7 @@ export default function UserAccountManagement() {
     setLoading(true);
     try {
       const res = await apiFetch('/api/users/view', 'GET');
+      // const data = await fakeFetchUsers();
       const data = await res.json();
       setUsers(data);
     } catch { setUsers([]); }
@@ -39,6 +148,7 @@ export default function UserAccountManagement() {
   async function fetchProfiles() {
     try {
       const res = await apiFetch('/api/user-profiles/view', 'GET');
+      // const res = await fakeFetchUsers();
       const data = await res.json();
       setProfiles(data);
     } catch { setProfiles([]); }
@@ -53,11 +163,9 @@ export default function UserAccountManagement() {
 
     setLoading(true);
     try {
-      // Call the search endpoint with the search term
       const res = await apiFetch('/api/users/search?search=' + encodeURIComponent(search), 'GET');
+      // const data = await fakeSearchUsers(search);
       const data = await res.json();
-
-      // Show results (may be empty if nothing found)
       setUsers(data);
     } catch (err) {
       setUsers([]);
@@ -82,6 +190,7 @@ export default function UserAccountManagement() {
     if (!confirm(`Are you sure you want to ${isSuspended ? 'unsuspend' : 'suspend'} this user?`)) return;
     try {
       await apiFetch('/api/users/' + userID + '/suspend', 'PUT');
+      // await fakeSuspendUser(userID, isSuspended);
       viewUserAccount();
     } catch { alert('Failed to update suspension status.'); }
   }
@@ -95,12 +204,18 @@ export default function UserAccountManagement() {
     try {
       const body = { username: form.username, role: form.role, name: form.name, email: form.email, phoneNumber: form.phoneNumber };
       if (form.password) body.password = form.password;
-
       const url = modal.mode === 'edit' ? '/api/users/' + form.userID : '/api/users';
       const method = modal.mode === 'edit' ? 'PUT' : 'POST';
       const res = await apiFetch(url, method, body);
       const data = await res.json();
       if (!res.ok) { setModalAlert({ type: 'error', msg: data.message }); return; }
+      /*
+      if (modal.mode === 'edit') {
+        await fakeUpdateUser(form.userID, { role: form.role, name: form.name, email: form.email, phoneNumber: form.phoneNumber, password: form.password });
+      } else {
+        await fakeCreateUser({ username: form.username, password: form.password, role: form.role, name: form.name, email: form.email, phoneNumber: form.phoneNumber });
+      }
+      */
       setModal(null);
       viewUserAccount();
     } catch { setModalAlert({ type: 'error', msg: 'Server error. Try again.' }); }

@@ -4,6 +4,94 @@ import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import { requireAuth, apiFetch } from '@/lib/auth';
 
+// ======================= DUMMY DATA & FUNCTIONS START =======================
+
+// Dummy data for user profiles (in-memory array)
+let dummyProfiles = [
+  {
+    _id: '1',
+    roleID: '1',
+    roleName: 'user_admin',
+    description: 'Can manage users and roles',
+    suspended: false,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    _id: '2',
+    roleID: '2',
+    roleName: 'fundraiser',
+    description: 'Can create fundraising activities',
+    suspended: false,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    _id: '3',
+    roleID: '3',
+    roleName: 'donee',
+    description: 'Can receive donations',
+    suspended: false,
+    createdAt: new Date().toISOString(),
+  },
+];
+
+// Dummy fetch all profiles
+function fakeFetchProfiles() {
+  return Promise.resolve([...dummyProfiles]);
+}
+
+// Dummy search profiles
+function fakeSearchProfiles(search) {
+  if (!search.trim()) return fakeFetchProfiles();
+  const term = search.trim().toLowerCase();
+  return Promise.resolve(
+    dummyProfiles.filter(
+      p =>
+        p.roleName.toLowerCase().includes(term) ||
+        p.roleID.toLowerCase().includes(term) ||
+        (p.description && p.description.toLowerCase().includes(term))
+    )
+  );
+}
+
+// Dummy create profile
+function fakeCreateProfile({ roleName, description }) {
+  const newProfile = {
+    _id: (dummyProfiles.length + 1).toString(),
+    roleID: (dummyProfiles.length + 1).toString(),
+    roleName,
+    description,
+    suspended: false,
+    createdAt: new Date().toISOString(),
+  };
+  dummyProfiles.push(newProfile);
+  return Promise.resolve(newProfile);
+}
+
+// Dummy update profile
+function fakeUpdateProfile(roleID, { roleName, description }) {
+  const idx = dummyProfiles.findIndex(p => p.roleID === roleID);
+  if (idx === -1) return Promise.reject(new Error('Profile not found'));
+  dummyProfiles[idx] = {
+    ...dummyProfiles[idx],
+    roleName,
+    description,
+  };
+  return Promise.resolve(dummyProfiles[idx]);
+}
+
+// Dummy suspend/unsuspend profile
+function fakeSuspendProfile(roleID, isSuspended) {
+  const idx = dummyProfiles.findIndex(p => p.roleID === roleID);
+  if (idx === -1) return Promise.reject(new Error('Profile not found'));
+  dummyProfiles[idx] = {
+    ...dummyProfiles[idx],
+    suspended: !isSuspended,
+  };
+  return Promise.resolve(dummyProfiles[idx]);
+}
+
+// ======================= DUMMY DATA & FUNCTIONS END =======================
+
 const EMPTY_FORM = { roleName: '', description: '' };
 
 export default function UserProfileManagement() {
@@ -29,6 +117,7 @@ export default function UserProfileManagement() {
     setLoading(true);
     try {
       const res = await apiFetch('/api/user-profiles/view', 'GET');
+      // const data = await fakeFetchProfiles();
       const data = await res.json();
       setProfiles(data);
     } catch { setProfiles([]); }
@@ -44,11 +133,9 @@ export default function UserProfileManagement() {
 
     setLoading(true);
     try {
-      // Call the search endpoint with the search term
       const res = await apiFetch('/api/user-profiles/search?search=' + encodeURIComponent(search), 'GET');
+      // const data = await fakeSearchProfiles(search);
       const data = await res.json();
-
-      // Show results (may be empty if nothing found)
       setProfiles(data);
     } catch (err) {
       setProfiles([]);
@@ -73,8 +160,10 @@ export default function UserProfileManagement() {
     if (!confirm(`Are you sure you want to ${isSuspended ? 'unsuspend' : 'suspend'} this profile? This will also ${isSuspended ? 'unsuspend' : 'suspend'} all users with this role.`)) return;
     try {
       const res = await apiFetch('/api/user-profiles/' + roleID + '/suspend', 'PUT');
+      // const data = await fakeSuspendProfile(roleID, isSuspended);
       const data = await res.json();
       alert(data.message);
+      // alert('Profile suspension updated.');
       viewUserProfile();
     } catch { alert('Failed to update suspension status.'); }
   }
@@ -88,6 +177,13 @@ export default function UserProfileManagement() {
       const url = modal.mode === 'edit' ? '/api/user-profiles/' + form.roleID : '/api/user-profiles';
       const method = modal.mode === 'edit' ? 'PUT' : 'POST';
       const res = await apiFetch(url, method, body);
+      /*
+      if (modal.mode === 'edit') {
+        await fakeUpdateProfile(form.roleID, { roleName: form.roleName, description: form.description });
+      } else {
+        await fakeCreateProfile({ roleName: form.roleName, description: form.description });
+      }
+        */
       const data = await res.json();
       if (!res.ok) { setModalAlert({ type: 'error', msg: data.message }); return; }
       setModal(null);
