@@ -3,136 +3,155 @@ import { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import { requireAuth } from '@/lib/auth';
 
-// ---- FAKE API ----
-const fakeFetchFRAs = () =>
-  Promise.resolve([
-    {
-      id: 1,
-      title: 'Save The Earth',
-      description: 'Plant 1000 trees',
-      target: 5000,
-      start: '2024-05-01',
-      end: '2024-06-01',
-      suspended: false,
-    },
-    {
-      id: 2,
-      title: 'School Fund',
-      description: 'Books for kids',
-      target: 2000,
-      start: '2024-07-01',
-      end: '2024-08-01',
-      suspended: false,
-    },
-  ]);
+// ========== API ENDPOINT ==========
+const API_BASE = 'http://localhost:3000/api/fra'; // <-- Update if backend runs elsewhere!
 
-const fakeCreateFRA = (fra) =>
-  Promise.resolve({ ...fra, id: Math.random(), suspended: false });
+// ========== API HELPERS ==========
+async function fetchFRAs() {
+  const res = await fetch(`${API_BASE}/search`);
+  const data = await res.json();
+  return data.fraList || [];
+}
+async function createFRA(fra) {
+  const res = await fetch(API_BASE, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(fra),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Error creating FRA');
+  return data.fra;
+}
+async function updateFRA(fraID, updates) {
+  const res = await fetch(`${API_BASE}/${fraID}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Error updating FRA');
+  return data.fra;
+}
+async function suspendFRA(fraID) {
+  const res = await fetch(`${API_BASE}/${fraID}/suspend`, {
+    method: 'PATCH'
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Error suspending FRA');
+  return data.fra;
+}
+function formatDate(dateStr) {
+  if (!dateStr) return '';
+  if (dateStr.length >= 10) return dateStr.slice(0, 10);
+  return dateStr;
+}
 
-// For demo: simulate updating
-const fakeUpdateFRA = (id, fraUpdate) =>
-  Promise.resolve({ ...fraUpdate, id });
-
-// For demo: simulate suspension
-const fakeSuspendFRA = (id) =>
-  Promise.resolve({ id, suspended: true });
-
+// ========== MAIN DASHBOARD COMPONENT ==========
 export default function FundraiserDashboard() {
   const [user, setUser] = useState(null);
   const [fras, setFras] = useState([]);
   const [showForm, setShowForm] = useState(false);
-  const [selectedFRA, setSelectedFRA] = useState(null);
-  // form fields
+  const [editingId, setEditingId] = useState(null);
+  const [successMsg, setSuccessMsg] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+  // Form fields
   const [title, setTitle] = useState('');
   const [desc, setDesc] = useState('');
+  const [category, setCategory] = useState('');
   const [target, setTarget] = useState('');
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
   const [creating, setCreating] = useState(false);
-  const [editingId, setEditingId] = useState(null); // Track if editing
 
   useEffect(() => {
     const u = requireAuth('fundraiser');
     if (u) setUser(u);
-    fakeFetchFRAs().then(setFras);
+    fetchFRAs().then(fras => setFras(fras)).catch(() => setFras([]));
   }, []);
-
-  if (!user) return null;
 
   function openForm() {
     setShowForm(true);
-    setSelectedFRA(null);
     setEditingId(null);
     setTitle('');
     setDesc('');
+    setCategory('');
     setTarget('');
     setStart('');
     setEnd('');
+    setErrorMsg('');
   }
 
   function openEditForm(fra) {
     setShowForm(true);
-    setSelectedFRA(null); // Hide detail
-    setEditingId(fra.id);
-    setTitle(fra.title);
-    setDesc(fra.description);
-    setTarget(fra.target);
-    setStart(fra.start);
-    setEnd(fra.end);
+    setEditingId(fra.fraID || fra.id);
+    setTitle(fra.fraName || fra.title || '');
+    setDesc(fra.description || '');
+    setCategory(fra.category || '');
+    setTarget(fra.targetAmount?.toString() || fra.target?.toString() || '');
+    setStart(formatDate(fra.startDate || fra.start));
+    setEnd(formatDate(fra.endDate || fra.end));
+    setErrorMsg('');
   }
 
-  function handleCreate(e) {
+  async function handleCreate(e) {
     e.preventDefault();
     setCreating(true);
+    setErrorMsg('');
+    const fraData = {
+      fraName: title,
+      description: desc,
+      category: category,
+      targetAmount: Number(target),
+      startDate: start,
+      endDate: end,
+    };
 
-    if (editingId !== null) {
-      // Update existing FRA
-      fakeUpdateFRA(editingId, {
-        title,
-        description: desc,
-        target,
-        start,
-        end,
-        suspended: false,
-      }).then((updatedFRA) => {
+    try {
+      if (editingId !== null) {
+        // Update
+        const updated = await updateFRA(editingId, fraData);
         setFras(fras =>
           fras.map(fra =>
-            fra.id === editingId ? { ...fra, ...updatedFRA } : fra
+            (fra.fraID === editingId || fra.id === editingId) ? updated : fra
           )
         );
-        setShowForm(false);
-        setEditingId(null);
-        setCreating(false);
-      });
-      return;
-    }
-
-    // Create new FRA
-    fakeCreateFRA({
-      title,
-      description: desc,
-      target,
-      start,
-      end,
-    }).then((fra) => {
-      setFras([fra, ...fras]);
+        setSuccessMsg('FRA updated');
+      } else {
+        // Create new
+        const created = await createFRA(fraData);
+        setFras([created, ...fras]);
+        setSuccessMsg('FRA created');
+      }
       setShowForm(false);
-      setCreating(false);
-    });
+      setEditingId(null);
+    } catch (error) {
+      setErrorMsg(error.message);
+    }
+    setCreating(false);
+    setTimeout(() => setSuccessMsg(''), 2200);
   }
 
-  function suspendFRA(id) {
-    // For demo: mark FRA as suspended
-    fakeSuspendFRA(id).then(() => {
+  async function handleSuspend(id) {
+    setErrorMsg('');
+    try {
+      const updated = await suspendFRA(id);
       setFras(fras =>
         fras.map(fra =>
-          fra.id === id ? { ...fra, suspended: true } : fra
+          (fra.fraID === id || fra.id === id) ? updated : fra
         )
       );
-      // If currently viewing detail, close it if it was suspended
-      if (selectedFRA && selectedFRA.id === id) setSelectedFRA(null);
-    });
+    } catch (error) {
+      setErrorMsg(error.message);
+    }
   }
+
+  function handleCancel() {
+    setShowForm(false);
+    setEditingId(null);
+    setErrorMsg('');
+  }
+
+  if (!user) return null;
 
   return (
     <>
@@ -144,13 +163,21 @@ export default function FundraiserDashboard() {
             Start and manage your fundraising activities with ease
           </p>
         </div>
-
+        {successMsg &&
+          <div className="alert success" style={{ marginBottom: 16 }}>
+            {successMsg}
+          </div>
+        }
+        {errorMsg &&
+          <div className="alert error" style={{ marginBottom: 16 }}>
+            {errorMsg}
+          </div>
+        }
         <div className="toolbar" style={{ marginBottom: '2rem', justifyContent: 'flex-end' }}>
           <button className="btn-primary" onClick={openForm}>
             ➕&nbsp;New Fundraising Activity
           </button>
         </div>
-
         {showForm && (
           <div className="modal-overlay active" style={{ display: 'flex' }}>
             <div className="modal" style={{ maxWidth: 540 }}>
@@ -167,6 +194,16 @@ export default function FundraiserDashboard() {
                     required
                     autoFocus
                     placeholder="e.g. Build A Well"
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="fra-category">Category</label>
+                  <input
+                    id="fra-category"
+                    value={category}
+                    onChange={e => setCategory(e.target.value)}
+                    required
+                    placeholder="e.g. Education, Health, Environment"
                   />
                 </div>
                 <div className="form-group">
@@ -209,10 +246,7 @@ export default function FundraiserDashboard() {
                   />
                 </div>
                 <div className="modal-actions" style={{ justifyContent: 'space-between' }}>
-                  <button type="button" className="btn-cancel" onClick={() => {
-                    setShowForm(false);
-                    setEditingId(null);
-                  }}>
+                  <button type="button" className="btn-cancel" onClick={handleCancel}>
                     Cancel
                   </button>
                   <button type="submit" className="btn-primary" disabled={creating}>
@@ -233,108 +267,56 @@ export default function FundraiserDashboard() {
                   No fundraising activities yet. Click "New Fundraising Activity" to begin!
                 </div>
               ) : (
-                fras.map(fra => (
-                  <div
-                    key={fra.id}
-                    className="menu-card"
-                    onClick={e => {
-                      // Prevent card click if clicking Edit/Suspend
-                      if (e.target.closest('.action-btn')) return;
-                      if (fra.suspended) return; // Prevent showing details if suspended
-                      setSelectedFRA(fra);
-                    }}
-                    style={{
-                      background: fra.suspended
-                        ? 'rgba(240,112,112,0.11)'
-                        : (selectedFRA && selectedFRA.id === fra.id ? 'var(--gold-light)' : undefined),
-                      border: fra.suspended
-                        ? '2px solid var(--error)'
-                        : (selectedFRA && selectedFRA.id === fra.id ? '2px solid var(--gold)' : undefined),
-                      opacity: fra.suspended ? 0.7 : 1,
-                      filter: fra.suspended ? 'grayscale(0.6)' : undefined,
-                      pointerEvents: fra.suspended ? 'none' : 'inherit',
-                      transition: 'all 0.15s',
-                      minHeight: 180,
-                      position: 'relative'
-                    }}
-                  >
-                    <div
-                      className="card-icon"
+                fras.map(fra => {
+                  const fraID = fra.fraID || fra.id;
+                  return (
+                    <div key={fraID} className="menu-card"
                       style={{
-                        background: fra.suspended
-                          ? 'rgba(240,112,112,0.12)'
-                          : 'var(--gold-light)',
-                        fontSize: 23
-                      }}
-                    >📄</div>
-                    <h3>
-                      {fra.title}
-                      {fra.suspended && (
-                        <span className="badge badge-suspended" style={{ marginLeft: 10 }}>Suspended</span>
-                      )}
-                    </h3>
-                    <p>{fra.description}</p>
-                    <div style={{ fontSize: '0.9rem', marginTop: 8, color: 'var(--muted)' }}>
-                      🎯 {fra.target} &nbsp; &nbsp; 🗓 {fra.start} → {fra.end}
+                        background: fra.suspended ? 'rgba(240,112,112,0.11)' : undefined,
+                        border: fra.suspended ? '2px solid var(--error)' : undefined,
+                        opacity: fra.suspended ? 0.7 : 1,
+                        filter: fra.suspended ? 'grayscale(0.6)' : undefined,
+                        pointerEvents: fra.suspended ? 'none' : 'inherit',
+                      }}>
+                      <div className="card-icon" style={{ background: 'var(--gold-light)', fontSize: 23 }}>📄</div>
+                      <h3>
+                        {fra.fraName || fra.title}
+                        {fra.suspended && (
+                          <span className="badge badge-suspended" style={{ marginLeft: 10 }}>Suspended</span>
+                        )}
+                      </h3>
+                      <div style={{ fontSize: '0.92rem', color: 'var(--gold)', fontWeight: 500 }}>
+                        Category: {fra.category ? fra.category : <i>None</i>}
+                      </div>
+                      <p>{fra.description}</p>
+                      <div style={{ fontSize: '0.9rem', marginTop: 8, color: 'var(--muted)' }}>
+                        🎯 {fra.targetAmount || fra.target} &nbsp; &nbsp;
+                        🗓 {formatDate(fra.startDate || fra.start)} → {formatDate(fra.endDate || fra.end)}
+                      </div>
+                      <div style={{ display: 'flex', gap: '0.5rem', marginTop: 16 }}>
+                        <button
+                          type="button"
+                          className="action-btn btn-edit"
+                          onClick={() => openEditForm(fra)}
+                          disabled={fra.suspended}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          className="action-btn btn-suspend"
+                          onClick={() => handleSuspend(fraID)}
+                          disabled={fra.suspended}
+                        >
+                          Suspend
+                        </button>
+                      </div>
                     </div>
-                    <div className="card-arrow" style={{ marginTop: 10 }}>View →</div>
-                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: 16 }}>
-                      <button
-                        type="button"
-                        className="action-btn btn-edit"
-                        style={{ borderRadius: 20 }} // Rounded
-                        onClick={e => {
-                          e.stopPropagation();
-                          openEditForm(fra);
-                        }}
-                        aria-label="Edit fundraising activity"
-                        disabled={fra.suspended}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        className="action-btn btn-suspend"
-                        style={{ borderRadius: 20 }} // Rounded
-                        onClick={e => {
-                          e.stopPropagation();
-                          suspendFRA(fra.id);
-                        }}
-                        aria-label="Suspend fundraising activity"
-                        disabled={fra.suspended}
-                      >
-                        Suspend
-                      </button>
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </>
-        )}
-
-        {/* FRA Detail Panel */}
-        {selectedFRA && (
-          <div style={{
-            margin: '2rem 0',
-            background: 'var(--card-bg)',
-            border: '2px solid var(--gold)',
-            borderRadius: 'var(--border-radius-lg)',
-            padding: '2rem',
-            animation: 'fadeUp 0.4s both'
-          }}>
-            <button
-              className="btn-cancel"
-              style={{ float: 'right', marginLeft: '1rem' }}
-              onClick={() => setSelectedFRA(null)}
-            >
-              ✕ Close
-            </button>
-            <h3 style={{ marginBottom: '.7em' }}>{selectedFRA.title}</h3>
-            <div style={{ marginBottom: '.7em' }}><b>Description:</b> {selectedFRA.description}</div>
-            <div><b>Target Amount:</b> {selectedFRA.target}</div>
-            <div><b>Duration:</b> {selectedFRA.start} to {selectedFRA.end}</div>
-          </div>
         )}
       </div>
     </>
