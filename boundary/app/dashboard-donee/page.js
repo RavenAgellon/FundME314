@@ -30,10 +30,7 @@ export default function DoneeDashboard() {
         </div>
 
         <div className="menu-grid">
-          <div
-            className="menu-card"
-            // onClick={() => router.push('/fra-donee')}
-          >
+          <div className="menu-card" onClick={() => router.push('/fra-donee')}>
             <div className="card-icon">🚀</div>
             <h3>Ongoing FRA</h3>
             <p>
