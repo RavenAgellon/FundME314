@@ -80,27 +80,11 @@ async function suspendFRA(req, res) {
 
 async function viewFRA(req, res) {
   try {
-    const fraID = Number(req.params.fraID);
-
-    if (Number.isNaN(fraID)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid FRA ID'
-      });
-    }
-
-    const fra = await FRA.findOne({ fraID });
-
-    if (!fra) {
-      return res.status(404).json({
-        success: false,
-        message: 'FRA not found'
-      });
-    }
+    const fraList = await FRA.find().sort({ fraID: 1 });
 
     return res.json({
       success: true,
-      fra
+      fraList
     });
   } catch (err) {
     return res.status(500).json({
