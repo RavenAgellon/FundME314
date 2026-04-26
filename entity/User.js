@@ -1,13 +1,14 @@
 const mongoose = require('mongoose');
+const Counter = require('./Counter');
 
 // -------------------------------------------------------
 // USER SCHEMA — defines what a User looks like in the database
 // -------------------------------------------------------
 const userSchema = new mongoose.Schema({
-  userID:      { type: String, unique: true },                  // auto-generated e.g. UA-0001
+  userID:      { type: Number, unique: true },                  // auto-generated global sequence
   username:    { type: String, required: true, unique: true },  // login name, never changes
   password:    { type: String, required: true },                // stored as plain text
-  role:        { type: String, required: true },                // e.g. user_admin, fundraiser
+  role:        { type: String, required: true },                // e.g. admin, fundraiser, donee, management
   name:        { type: String },                                // full name
   email:       { type: String },                                // email address
   phoneNumber: { type: String, default: '' },                   // must be 8 digits if provided
@@ -27,29 +28,17 @@ userSchema.pre('save', async function(next) {
     return next();
   }
 
-  // Choose a 2-letter prefix based on the user's role
-  const prefixMap = {
-    user_admin:          'UA',
-    fundraiser:          'FR',
-    donee:               'DN',
-    platform_management: 'PM'
-  };
-
-  // Get prefix for this role, default to 'US' if role is custom
-  const prefix = prefixMap[this.role] || 'US';
-
-  // Count how many users with this role already exist
-  const existingCount = await mongoose.model('User').countDocuments({ role: this.role });
-
-  // Generate the next number, padded to 4 digits (e.g. 1 → 0001)
-  const nextNumber = existingCount + 1;
-  const paddedNumber = String(nextNumber).padStart(4, '0');
-
-  // Combine prefix and number to form the userID
-  this.userID = prefix + '-' + paddedNumber;
-
-  // Move on to the next step
-  next();
+  try {
+    const counter = await Counter.findByIdAndUpdate(
+      { _id: 'userID' },
+      { $inc: { seq: 1 } },
+      { new: true, upsert: true }
+    );
+    this.userID = counter.seq;
+    next();
+  } catch (err) {
+    next(err);
+  }
 });
 
 module.exports = mongoose.model('User', userSchema);
