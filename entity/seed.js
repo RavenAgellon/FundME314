@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const User = require('./User');
 const UserProfile = require('./UserProfile');
+const FRA = require('./FRA');
 require('dotenv').config();
 
 const roles = ['user_admin', 'fundraiser', 'donee', 'platform_management'];
@@ -39,7 +40,6 @@ async function seed() {
   }*/
 
   // Step 4: Save all users to the database
-  // Passwords are stored as plain text (no hashing)
   for (const u of users) {
     await new User(u).save();
   }
@@ -60,6 +60,35 @@ async function seed() {
     await new UserProfile(p).save();
   }
   console.log('✅ Seeded ' + profiles.length + ' user profiles');
+
+  // Step 7: Delete all existing FRAs
+  await FRA.deleteMany({});
+
+  // Step 8: Create FRA test data — mix of ongoing and completed
+  const today = new Date();
+
+  const fras = [
+    // Ongoing FRAs (endDate in the future)
+    { fraName: 'Help for Education',     description: 'Providing school supplies for underprivileged children.',  targetAmount: 5000,  startDate: new Date(today.getFullYear(), today.getMonth(), 1),   endDate: new Date(today.getFullYear(), today.getMonth() + 2, 1) },
+    { fraName: 'Medical Aid Fund',        description: 'Supporting families with medical bills.',                  targetAmount: 10000, startDate: new Date(today.getFullYear(), today.getMonth(), 1),   endDate: new Date(today.getFullYear(), today.getMonth() + 1, 15) },
+    { fraName: 'Animal Shelter Support', description: 'Feeding and housing stray animals.',                       targetAmount: 3000,  startDate: new Date(today.getFullYear(), today.getMonth(), 1),   endDate: new Date(today.getFullYear(), today.getMonth() + 3, 1) },
+    { fraName: 'Disaster Relief Fund',   description: 'Emergency aid for flood victims.',                         targetAmount: 20000, startDate: new Date(today.getFullYear(), today.getMonth(), 1),   endDate: new Date(today.getFullYear(), today.getMonth() + 1, 1) },
+    { fraName: 'Community Garden',       description: 'Building a community garden in the neighbourhood.',        targetAmount: 2000,  startDate: new Date(today.getFullYear(), today.getMonth(), 1),   endDate: new Date(today.getFullYear(), today.getMonth() + 4, 1) },
+    { fraName: 'Clean Water Project',    description: 'Installing water filters in rural villages.',               targetAmount: 8000,  startDate: new Date(today.getFullYear(), today.getMonth(), 1),   endDate: new Date(today.getFullYear(), today.getMonth() + 2, 15) },
+    { fraName: 'Senior Care Programme',  description: 'Meals and companionship for elderly residents.',            targetAmount: 4000,  startDate: new Date(today.getFullYear(), today.getMonth(), 1),   endDate: new Date(today.getFullYear(), today.getMonth() + 1, 20) },
+    { fraName: 'Youth Sports Fund',      description: 'Sponsoring sports equipment for youth teams.',              targetAmount: 1500,  startDate: new Date(today.getFullYear(), today.getMonth(), 1),   endDate: new Date(today.getFullYear(), today.getMonth() + 5, 1) },
+
+    // Completed FRAs (endDate in the past)
+    { fraName: 'Food Bank Drive',        description: 'Collected canned food for local food banks.',               targetAmount: 1000,  startDate: new Date(today.getFullYear(), today.getMonth() - 3, 1), endDate: new Date(today.getFullYear(), today.getMonth() - 1, 1) },
+    { fraName: 'School Library Fund',    description: 'Donated books to primary school libraries.',                targetAmount: 2500,  startDate: new Date(today.getFullYear(), today.getMonth() - 4, 1), endDate: new Date(today.getFullYear(), today.getMonth() - 2, 1) },
+    { fraName: 'Wheelchair Drive',       description: 'Provided wheelchairs for mobility-impaired residents.',     targetAmount: 6000,  startDate: new Date(today.getFullYear(), today.getMonth() - 2, 1), endDate: new Date(today.getFullYear(), today.getMonth() - 1, 15) },
+    { fraName: 'Tree Planting Campaign', description: 'Planted 500 trees across the island.',                     targetAmount: 3000,  startDate: new Date(today.getFullYear(), today.getMonth() - 5, 1), endDate: new Date(today.getFullYear(), today.getMonth() - 3, 1) },
+  ];
+
+  for (const f of fras) {
+    await new FRA(f).save();
+  }
+  console.log('✅ Seeded ' + fras.length + ' FRAs');
 
   console.log('\nTest credentials:');
   console.log('  User Admin:      admin1 / admin123');
