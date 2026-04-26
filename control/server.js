@@ -13,6 +13,8 @@ app.use('/api/users', require('./routes/users'));
 app.use('/api/user-profiles', require('./routes/userProfiles'));
 app.use('/api/fra', require('./routes/fra'));
 app.use('/api/fra-category', require('./routes/fraCategory'));
+app.use('/api/favourite-fra', require('./routes/favouriteFRA'));
+
 
 // Connect to MongoDB and start server
 mongoose.connect(process.env.MONGO_URI)
