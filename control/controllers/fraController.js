@@ -170,10 +170,7 @@ async function searchFRA(req, res) {
       fraName: { $regex: fraName.trim(), $options: 'i' }
     }).sort({ createdAt: -1 });
 
-    return res.json({
-      success: true,
-      fraList
-    });
+    return res.json(fraList);
   } catch (err) {
     return res.status(500).json({
       success: false,
@@ -191,10 +188,7 @@ async function searchCompletedFRA(req, res) {
       endDate: { $lt: today }
     }).sort({ endDate: -1 });
 
-    return res.json({
-      success: true,
-      fraList
-    });
+    return res.json(fraList);
   } catch (err) {
     return res.status(500).json({
       success: false,
