@@ -39,7 +39,7 @@ async function updateFRACategory(req, res) {
   }
 }
 
-// viewFRACategory -> return list of FRAs linked to that category
+
 async function viewFRACategory(req, res) {
   try {
     const catName = req.params.catName;

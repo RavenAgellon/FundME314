@@ -12,7 +12,7 @@ const {
 router.post('/', createFRA);
 router.get('/search', searchFRA);
 router.get('/completed', searchCompletedFRA);
-router.get('/:fraID', viewFRA);
+router.get('/', viewFRA);
 router.put('/:fraID', updateFRA);
 router.patch('/:fraID/suspend', suspendFRA);
 
