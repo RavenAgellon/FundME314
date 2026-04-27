@@ -51,14 +51,11 @@ export default function DoneeDashboard() {
 
           <div
             className="menu-card"
-            // onClick={() => router.push('/favourite-list-management') }
+            onClick={() => router.push('/favourite-list')}
           >
             <div className="card-icon">💛</div>
             <h3>My Favourite List</h3>
-            <p>
-              Create, view, update, suspend and search user accounts across all
-              roles.
-            </p>
+            <p>Manage favourite FRAs to keep track of the progress.</p>
             <div className="card-arrow">→</div>
           </div>
         </div>
