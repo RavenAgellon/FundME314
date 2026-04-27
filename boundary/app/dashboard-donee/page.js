@@ -41,11 +41,11 @@ export default function DoneeDashboard() {
 
           <div
             className="menu-card"
-            // onClick={() => router.push('/fra-completed-donee')}
+            onClick={() => router.push('/fra-completed-donee')}
           >
             <div className="card-icon">⛳</div>
             <h3>Completed FRA</h3>
-            <p>View and search completed fundraising activities.</p>
+            <p>View completed fundraising activities.</p>
             <div className="card-arrow">→</div>
           </div>
 
