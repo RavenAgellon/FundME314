@@ -195,7 +195,7 @@ export default function DoneeFRAPage() {
         </span>
         <h2>Ongoing Fundraising Activities</h2>
         <p className="subtitle">
-          View, search and participate in ongoing fundraising activities.
+          View and search ongoing fundraising activities.
         </p>
 
         <div className="toolbar">
@@ -225,7 +225,7 @@ export default function DoneeFRAPage() {
                 <th>FRA ID</th>
                 <th>Name</th>
                 <th>Target Amount</th>
-                <th>Due</th>
+                <th>Deadline</th>
                 <th>Favourite</th>
               </tr>
             </thead>

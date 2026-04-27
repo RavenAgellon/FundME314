@@ -160,9 +160,7 @@ export default function DoneeCompletedFRAPage() {
           ← Back to Dashboard
         </span>
         <h2>Completed Fundraising Activities</h2>
-        <p className="subtitle">
-          View and search completed fundraising activities.
-        </p>
+        <p className="subtitle">View completed fundraising activities.</p>
 
         <div className="table-wrap">
           <table>

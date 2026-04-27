@@ -25,7 +25,7 @@ export default function DoneeDashboard() {
         <div style={{ textAlign: 'center', margin: '3rem 0 2.5rem' }}>
           <h2>Donee Dashboard</h2>
           <p className="subfraName">
-            Browse fundraising activities and track your donations.
+            Browse fundraising activities and track your favourites.
           </p>
         </div>
 
@@ -33,9 +33,7 @@ export default function DoneeDashboard() {
           <div className="menu-card" onClick={() => router.push('/fra-donee')}>
             <div className="card-icon">🚀</div>
             <h3>Ongoing FRA</h3>
-            <p>
-              View, search and participate in ongoing fundraising activities.
-            </p>
+            <p>View and search ongoing fundraising activities.</p>
             <div className="card-arrow">→</div>
           </div>
 
