@@ -89,7 +89,13 @@ export default function DoneeFRAPage() {
         'GET',
       );
       const data = await res.json();
-      setFRAs(sortByFRAID(data || []));
+
+      // Get ongoing FRAs only from the search result
+      const ongoingFRAs = sortByFRAID(
+        (data || []).filter((fra) => new Date(fra.endDate) >= new Date()),
+      );
+
+      setFRAs(ongoingFRAs);
     } catch {
       setFRAs([]);
     } finally {
