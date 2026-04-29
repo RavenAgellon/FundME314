@@ -46,9 +46,11 @@ export default function PlatformGeneratedReportPage() {
   const [dailyTotal, setDailyTotal] = useState(null);
   const [weeklyTotal, setWeeklyTotal] = useState(null);
   const [monthlyTotal, setMonthlyTotal] = useState(null);
-  const [loadingDaily, setLoadingDaily] = useState(false);
-  const [loadingWeekly, setLoadingWeekly] = useState(false);
-  const [loadingMonthly, setLoadingMonthly] = useState(false);
+
+  const [loading, setLoading] = useState(false);
+  const [reportType, setReportType] = useState('');
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [endDate, setEndDate] = useState(null); // to display for weekly report result
 
   function displayPage() {
     const u = requireAuth('platform_management');
@@ -57,10 +59,10 @@ export default function PlatformGeneratedReportPage() {
 
   useEffect(() => {
     displayPage();
-  }, []);
+  }, [dailyTotal, weeklyTotal, monthlyTotal]);
 
   async function generateDailyReport() {
-    setLoadingDaily(true);
+    setLoading(true);
     try {
       const res = await apiFetch(
         `/api/fra/report/daily?date=${encodeURIComponent(dailyDate)}&month=${encodeURIComponent(dailyMonth)}&year=${encodeURIComponent(dailyYear)}`,
@@ -68,15 +70,19 @@ export default function PlatformGeneratedReportPage() {
       );
       const data = await res.json();
       setDailyTotal(data);
+      setReportType('daily');
+
+      const selectedDate = new Date(`${dailyYear}-${dailyMonth}-${dailyDate}`);
+      setSelectedDate(selectedDate);
     } catch {
       setDailyTotal(0);
     } finally {
-      setLoadingDaily(false);
+      setLoading(false);
     }
   }
 
   async function generateWeeklyReport() {
-    setLoadingWeekly(true);
+    setLoading(true);
     try {
       const res = await apiFetch(
         `/api/fra/report/weekly?date=${encodeURIComponent(weeklyDate)}&month=${encodeURIComponent(weeklyMonth)}&year=${encodeURIComponent(weeklyYear)}`,
@@ -84,15 +90,25 @@ export default function PlatformGeneratedReportPage() {
       );
       const data = await res.json();
       setWeeklyTotal(data);
+      setReportType('weekly');
+
+      const selectedDate = new Date(
+        `${weeklyYear}-${weeklyMonth}-${weeklyDate}`,
+      );
+      const endDate = new Date(selectedDate);
+      endDate.setDate(selectedDate.getDate() + 6);
+
+      setSelectedDate(selectedDate);
+      setEndDate(endDate);
     } catch {
       setWeeklyTotal(0);
     } finally {
-      setLoadingWeekly(false);
+      setLoading(false);
     }
   }
 
   async function generateMonthlyReport() {
-    setLoadingMonthly(true);
+    setLoading(true);
     try {
       const res = await apiFetch(
         `/api/fra/report/monthly?month=${encodeURIComponent(monthlyMonth)}&year=${encodeURIComponent(monthlyYear)}`,
@@ -100,11 +116,38 @@ export default function PlatformGeneratedReportPage() {
       );
       const data = await res.json();
       setMonthlyTotal(data);
+      setReportType('monthly');
+
+      const selectedDate = new Date(`${monthlyYear}-${monthlyMonth}-01`);
+      setSelectedDate(selectedDate);
     } catch {
       setMonthlyTotal(0);
     } finally {
-      setLoadingMonthly(false);
+      setLoading(false);
     }
+  }
+
+  function badgeStyle() {
+    return {
+      background: '#C9A84C22',
+      color: '#C9A84C',
+      padding: '2px 10px',
+      borderRadius: '20px',
+      fontSize: '1.3rem',
+      fontWeight: 500,
+      textTransform: 'uppercase',
+      letterSpacing: '0.5px',
+      margin: '0 6px',
+    };
+  }
+
+  function reportStyle() {
+    return {
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginTop: '3rem',
+    };
   }
 
   if (!user) return null;
@@ -113,7 +156,10 @@ export default function PlatformGeneratedReportPage() {
     <>
       <Navbar role="Platform Mgmt" username={user.name} />
       <div className="page">
-        <span className="back-link" onClick={() => router.push('/dashboard-platform')}>
+        <span
+          className="back-link"
+          onClick={() => router.push('/dashboard-platform')}
+        >
           ← Back to Dashboard
         </span>
         <h2>Report Management</h2>
@@ -130,19 +176,38 @@ export default function PlatformGeneratedReportPage() {
             <div className="report-fields">
               <div className="form-group">
                 <label>Day</label>
-                <input type="number" min="1" max="31" value={dailyDate} onChange={(e) => setDailyDate(e.target.value)} />
+                <input
+                  type="number"
+                  min="1"
+                  max="31"
+                  value={dailyDate}
+                  onChange={(e) => setDailyDate(e.target.value)}
+                />
               </div>
               <div className="form-group">
                 <label>Month</label>
-                <input type="number" min="1" max="12" value={dailyMonth} onChange={(e) => setDailyMonth(e.target.value)} />
+                <input
+                  type="number"
+                  min="1"
+                  max="12"
+                  value={dailyMonth}
+                  onChange={(e) => setDailyMonth(e.target.value)}
+                />
               </div>
               <div className="form-group">
                 <label>Year</label>
-                <input type="number" min="2000" value={dailyYear} onChange={(e) => setDailyYear(e.target.value)} />
+                <input
+                  type="number"
+                  min="2000"
+                  value={dailyYear}
+                  onChange={(e) => setDailyYear(e.target.value)}
+                />
               </div>
             </div>
             <div className="report-actions">
-              <button className="btn-primary" onClick={generateDailyReport}>Generate Daily Report</button>
+              <button className="btn-primary" onClick={generateDailyReport}>
+                Generate Daily Report
+              </button>
             </div>
           </section>
 
@@ -154,19 +219,38 @@ export default function PlatformGeneratedReportPage() {
             <div className="report-fields">
               <div className="form-group">
                 <label>Day</label>
-                <input type="number" min="1" max="31" value={weeklyDate} onChange={(e) => setWeeklyDate(e.target.value)} />
+                <input
+                  type="number"
+                  min="1"
+                  max="31"
+                  value={weeklyDate}
+                  onChange={(e) => setWeeklyDate(e.target.value)}
+                />
               </div>
               <div className="form-group">
                 <label>Month</label>
-                <input type="number" min="1" max="12" value={weeklyMonth} onChange={(e) => setWeeklyMonth(e.target.value)} />
+                <input
+                  type="number"
+                  min="1"
+                  max="12"
+                  value={weeklyMonth}
+                  onChange={(e) => setWeeklyMonth(e.target.value)}
+                />
               </div>
               <div className="form-group">
                 <label>Year</label>
-                <input type="number" min="2000" value={weeklyYear} onChange={(e) => setWeeklyYear(e.target.value)} />
+                <input
+                  type="number"
+                  min="2000"
+                  value={weeklyYear}
+                  onChange={(e) => setWeeklyYear(e.target.value)}
+                />
               </div>
             </div>
             <div className="report-actions">
-              <button className="btn-primary" onClick={generateWeeklyReport}>Generate Weekly Report</button>
+              <button className="btn-primary" onClick={generateWeeklyReport}>
+                Generate Weekly Report
+              </button>
             </div>
           </section>
 
@@ -178,18 +262,87 @@ export default function PlatformGeneratedReportPage() {
             <div className="report-fields">
               <div className="form-group">
                 <label>Month</label>
-                <input type="number" min="1" max="12" value={monthlyMonth} onChange={(e) => setMonthlyMonth(e.target.value)} />
+                <input
+                  type="number"
+                  min="1"
+                  max="12"
+                  value={monthlyMonth}
+                  onChange={(e) => setMonthlyMonth(e.target.value)}
+                />
               </div>
               <div className="form-group">
                 <label>Year</label>
-                <input type="number" min="2000" value={monthlyYear} onChange={(e) => setMonthlyYear(e.target.value)} />
+                <input
+                  type="number"
+                  min="2000"
+                  value={monthlyYear}
+                  onChange={(e) => setMonthlyYear(e.target.value)}
+                />
               </div>
             </div>
             <div className="report-actions">
-              <button className="btn-primary" onClick={generateMonthlyReport}>Generate Monthly Report</button>
+              <button className="btn-primary" onClick={generateMonthlyReport}>
+                Generate Monthly Report
+              </button>
             </div>
           </section>
         </div>
+
+        {/* Display Report */}
+        {reportType === 'daily' && (
+          <div style={reportStyle()}>
+            {loading ? (
+              <h2>Loading...</h2>
+            ) : (
+              <>
+                <h2>{dailyTotal === 0 ? 'No' : dailyTotal} FRAs created on</h2>
+                <div style={badgeStyle()}>
+                  {selectedDate.toLocaleDateString('en-GB')}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {reportType === 'weekly' && (
+          <div style={reportStyle()}>
+            {loading ? (
+              <h2>Loading...</h2>
+            ) : (
+              <>
+                <h2>
+                  {weeklyTotal === 0 ? 'No' : weeklyTotal} FRAs created
+                  from{' '}
+                </h2>
+                <div style={badgeStyle()}>
+                  {selectedDate.toLocaleDateString('en-GB')}{' '}
+                </div>
+                <h2>to </h2>
+                <div style={badgeStyle()}>
+                  {endDate.toLocaleDateString('en-GB')}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {reportType === 'monthly' && (
+          <div style={reportStyle()}>
+            {loading ? (
+              <h2>Loading...</h2>
+            ) : (
+              <>
+                <h2>
+                  {monthlyTotal === 0 ? 'No' : monthlyTotal} FRAs created
+                  on{' '}
+                </h2>
+                <div style={badgeStyle()}>
+                  {`${selectedDate.toLocaleString('en-US', { month: 'long' })} ${selectedDate.getFullYear()}`}
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
     </>
   );
