@@ -134,16 +134,15 @@ export default function UserAccountManagement() {
 
   useEffect(() => { displayUserAdminPage(); }, []);
 
-  async function viewUserAccount() {
-    setLoading(true);
-    try {
-      const res = await apiFetch('/api/users/view', 'GET');
-      // const data = await fakeFetchUsers();
-      const data = await res.json();
-      setUsers(data);
-    } catch { setUsers([]); }
-    finally { setLoading(false); }
-  }
+async function viewUserAccount() {
+  setLoading(true);
+  try {
+    const res = await apiFetch('/api/users/view', 'GET');
+    const data = await res.json();
+    setUsers(Array.isArray(data) ? data : []); // ← guard here
+  } catch { setUsers([]); }
+  finally { setLoading(false); }
+}
 
   async function fetchProfiles() {
     try {
@@ -154,26 +153,22 @@ export default function UserAccountManagement() {
     } catch { setProfiles([]); }
   }
 
-  async function searchUserAccount() {
-    // If search box is empty, just load all users
-    if (!search.trim()) {
-      viewUserAccount();
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const res = await apiFetch('/api/users/search?search=' + encodeURIComponent(search), 'GET');
-      // const data = await fakeSearchUsers(search);
-      const data = await res.json();
-      setUsers(data);
-    } catch (err) {
-      setUsers([]);
-    } finally {
-      setLoading(false);
-    }
+async function searchUserAccount() {
+  if (!search.trim()) {
+    viewUserAccount();
+    return;
   }
-
+  setLoading(true);
+  try {
+    const res = await apiFetch('/api/users/search?search=' + encodeURIComponent(search), 'GET');
+    const data = await res.json();
+    setUsers(Array.isArray(data) ? data : (Array.isArray(data.users) ? data.users : []));
+  } catch {
+    setUsers([]);
+  } finally {
+    setLoading(false);
+  }
+}
   function createUserAccount() {
     setForm(EMPTY_FORM);
     setModalAlert(null);

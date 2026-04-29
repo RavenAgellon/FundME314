@@ -8,7 +8,7 @@ const userSchema = new mongoose.Schema({
   userID:      { type: Number, unique: true },                  // auto-generated global sequence
   username:    { type: String, required: true, unique: true },  // login name, never changes
   password:    { type: String, required: true },                // stored as plain text
-  role:        { type: String, required: true },                // e.g. admin, fundraiser, donee, management
+  role:        { type: String, required: true },                // e.g. user_admin, fundraiser, donee, platform_management
   name:        { type: String },                                // full name
   email:       { type: String },                                // email address
   phoneNumber: { type: String, default: '' },                   // must be 8 digits if provided
