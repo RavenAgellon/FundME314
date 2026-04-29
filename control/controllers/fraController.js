@@ -197,4 +197,71 @@ async function searchCompletedFRA(req, res) {
     });
   }
 }
-module.exports = { createFRA, suspendFRA, viewFRA, updateFRA, searchFRA, searchCompletedFRA };
+
+async function dailyReport(req, res) {
+  try {
+    const date = Number(req.query.date);
+    const month = Number(req.query.month);
+    const year = Number(req.query.year);
+
+    const start = new Date(year, month - 1, date, 0, 0, 0, 0);
+    const end = new Date(year, month - 1, date + 1, 0, 0, 0, 0);
+
+    const total = await FRA.countDocuments({
+      createdAt: { $gte: start, $lt: end }
+    });
+
+    return res.json(total);
+  } catch (err) {
+    return res.json(0);
+  }
+}
+
+async function weeklyReport(req, res) {
+  try {
+    const date = Number(req.query.date);
+    const month = Number(req.query.month);
+    const year = Number(req.query.year);
+
+    const start = new Date(year, month - 1, date, 0, 0, 0, 0);
+    const end = new Date(year, month - 1, date + 7, 0, 0, 0, 0);
+
+    const total = await FRA.countDocuments({
+      createdAt: { $gte: start, $lt: end }
+    });
+
+    return res.json(total);
+  } catch (err) {
+    return res.json(0);
+  }
+}
+
+async function monthlyReport(req, res) {
+  try {
+    const month = Number(req.query.month);
+    const year = Number(req.query.year);
+
+    const start = new Date(year, month - 1, 1, 0, 0, 0, 0);
+    const end = new Date(year, month, 1, 0, 0, 0, 0);
+
+    const total = await FRA.countDocuments({
+      createdAt: { $gte: start, $lt: end }
+    });
+
+    return res.json(total);
+  } catch (err) {
+    return res.json(0);
+  }
+}
+
+module.exports = {
+  createFRA,
+  suspendFRA,
+  viewFRA,
+  updateFRA,
+  searchFRA,
+  searchCompletedFRA,
+  dailyReport,
+  weeklyReport,
+  monthlyReport
+};
