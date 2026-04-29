@@ -94,7 +94,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 /* Modal */
 .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 200; align-items: center; justify-content: center; }
 .modal-overlay.active { display: flex; }
-.modal { background: #1E1E35; border: 1px solid var(--border); border-radius: 18px; padding: 2rem; width: 100%; max-width: 460px; margin: 1rem; animation: fadeUp 0.25s ease both; }
+.modal { background: #1E1E35; border: 1px solid var(--border); border-radius: 18px; padding: 2rem; width: 100%; max-width: 520px; margin: 1rem; animation: fadeUp 0.25s ease both; }
 .modal h3 { font-family: 'Playfair Display', serif; font-size: 1.3rem; margin-bottom: 1.25rem; }
 .modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.25rem; }
 .modal-alert { padding: 0.6rem 0.9rem; border-radius: 8px; font-size: 0.85rem; margin-bottom: 1rem; }
@@ -141,3 +141,19 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 .cred-pill:hover { background: rgba(201,168,76,0.08); border-color: rgba(201,168,76,0.3); }
 .cred-role { font-size: 0.7rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.6px; color: var(--gold); margin-bottom: 2px; }
 .cred-user { font-size: 0.78rem; color: var(--muted); }
+
+/* Report management */
+.report-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem; }
+.report-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 18px; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
+.report-card h3 { font-size: 1.1rem; font-weight: 500; margin-bottom: 0.35rem; }
+.report-card p { font-size: 0.85rem; color: var(--muted); line-height: 1.5; }
+.report-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.85rem; }
+.report-fields .form-group { margin-bottom: 0; }
+.report-actions { display: flex; justify-content: flex-start; }
+.report-result { border-top: 1px solid rgba(255,255,255,0.06); padding-top: 1rem; display: grid; gap: 0.35rem; }
+.report-result-label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.7px; }
+.report-result-value { font-family: 'Playfair Display', serif; font-size: 1.7rem; color: var(--gold); }
+
+@media (max-width: 760px) {
+  .report-fields { grid-template-columns: 1fr; }
+}

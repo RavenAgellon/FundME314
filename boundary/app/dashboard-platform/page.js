@@ -30,7 +30,7 @@ export default function PlatformDashboard() {
         <div className="menu-grid">
           <div
             className="menu-card"
-            // onClick={() => router.push('/fra-category-management')}
+            onClick={() => router.push('/platform-frcategories')}
           >
             <div className="card-icon">🗂️</div>
             <h3>FRA Category Management</h3>
@@ -43,7 +43,7 @@ export default function PlatformDashboard() {
 
           <div
             className="menu-card"
-            // onClick={() => router.push('/report-management')}
+            onClick={() => router.push('/platform-generated-report')}
           >
             <div className="card-icon">🧾</div>
             <h3>Report Management</h3>
