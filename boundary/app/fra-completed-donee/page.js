@@ -9,6 +9,7 @@ export default function DoneeCompletedFRAPage() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
   const [FRAs, setFRAs] = useState([]);
+  const [search, setSearch] = useState('');
   const [savedFRAs, setSavedFRAs] = useState([]);
   const [detailFRA, setDetailFRA] = useState(null);
   const [isSelectedFRASaved, setIsSelectedFRASaved] = useState(false);
@@ -66,6 +67,36 @@ export default function DoneeCompletedFRAPage() {
       setSavedFRAs(saved);
     } catch {
       setSavedFRAs([]);
+    }
+  }
+
+  async function searchFRA() {
+    // If search box is empty, just load all completed FRAs
+    if (!search.trim()) {
+      viewFRAs();
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await apiFetch(
+        '/api/fra/search?fraName=' + encodeURIComponent(search),
+        'GET',
+      );
+      const data = await res.json();
+
+      // Get completed FRAs only from the search result
+      const completedFRAs = sortByFRAID(
+        (data || []).filter((fra) => new Date(fra.endDate) < new Date()),
+      );
+
+      setFRAs(completedFRAs);
+      await fetchSavedFRAs(completedFRAs);
+    } catch {
+      setFRAs([]);
+      setSavedFRAs([]);
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -161,6 +192,26 @@ export default function DoneeCompletedFRAPage() {
         </span>
         <h2>Completed Fundraising Activities</h2>
         <p className="subtitle">View completed fundraising activities.</p>
+
+        <div className="toolbar">
+          <div className="search-wrap" style={{ display: 'flex' }}>
+            <span className="search-icon">🔍</span>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && searchFRA()}
+              placeholder="Search by FRA name"
+            />
+            <button
+              className="btn-primary"
+              onClick={searchFRA}
+              style={{ marginLeft: '1rem' }}
+            >
+              Search
+            </button>
+          </div>
+        </div>
 
         <div className="table-wrap">
           <table>
