@@ -38,7 +38,7 @@ async function saveFRA(req, res) {
     // Step 6: Save the favourite
     const favourite = new FavouriteFRA({
       doneeID: doneeID,
-      fraID:   fraID
+      fraID: fraID,
     });
 
     await favourite.save();
@@ -123,7 +123,7 @@ async function searchFavouriteFRA(req, res) {
     // Step 6: Search within saved FRAs by name
     const searchCondition = {
       fraID: { $in: fraIDList },
-      fraName: { $regex: searchTerm, $options: 'i' }
+      fraName: { $regex: searchTerm, $options: 'i' },
     };
 
     const fraList = await FRA.find(searchCondition).sort({ createdAt: -1 });
@@ -136,4 +136,40 @@ async function searchFavouriteFRA(req, res) {
   }
 }
 
-module.exports = { saveFRA, removeFRA, viewFavouriteFRA, searchFavouriteFRA };
+// -------------------------------------------------------
+// VIEW FAVOURITE COUNTS — get how many times each FRA was saved
+// -------------------------------------------------------
+async function getFavouriteCounts(req, res) {
+  try {
+    // Step 1: Group favourite records by fraID and count them
+    const counts = await FavouriteFRA.aggregate([
+      {
+        $group: {
+          _id: '$fraID',
+          savedCount: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          fraID: '$_id',
+          savedCount: 1,
+        },
+      },
+    ]);
+
+    // Step 2: Send the counts back to the browser
+    res.json(counts);
+
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+}
+
+module.exports = {
+  saveFRA,
+  removeFRA,
+  viewFavouriteFRA,
+  searchFavouriteFRA,
+  getFavouriteCounts,
+};

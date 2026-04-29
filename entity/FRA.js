@@ -4,11 +4,13 @@ const Counter = require('./Counter');
 const fraSchema = new mongoose.Schema({
   fraID: { type: Number, unique: true },
   fraName: { type: String, required: true, unique: true, trim: true },
+  category: { type: String, default: '' }, //added category field
   startDate: { type: Date, required: true },
   endDate: { type: Date, required: true },
+  description: { type: String, default: '' },
   targetAmount: { type: Number, required: true, min: 0 },
   suspended: { type: Boolean, default: false },
-  createdAt: { type: Date, default: Date.now }
+  createdAt: { type: Date, default: Date.now },
 });
 
 // Auto-generate integer fraID before saving

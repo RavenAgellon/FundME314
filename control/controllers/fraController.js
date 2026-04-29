@@ -2,7 +2,7 @@ const FRA = require('../../entity/FRA');
 
 async function createFRA(req, res) {
   try {
-    const { fraName, startDate, endDate, targetAmount } = req.body;
+    const { fraName, startDate, endDate, targetAmount, category, description } = req.body;
 
     if (!fraName || !startDate || !endDate || targetAmount === undefined) {
       return res.status(400).json({
@@ -21,6 +21,8 @@ async function createFRA(req, res) {
 
     const fra = new FRA({
       fraName: fraName.trim(),
+      category,
+      description,
       startDate,
       endDate,
       targetAmount
@@ -78,6 +80,43 @@ async function suspendFRA(req, res) {
   }
 }
 
+async function unsuspendFRA(req, res) {
+  try {
+    const fraID = Number(req.params.fraID);
+
+    if (Number.isNaN(fraID)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid FRA ID'
+      });
+    }
+
+    const fra = await FRA.findOne({ fraID });
+
+    if (!fra) {
+      return res.status(404).json({
+        success: false,
+        message: 'FRA not found'
+      });
+    }
+
+    fra.suspended = false;
+    await fra.save();
+
+    return res.json({
+      success: true,
+      message: 'FRA unsuspended successfully',
+      fra
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: err.message
+    });
+  }
+}
+
 async function viewFRA(req, res) {
   try {
     const fraList = await FRA.find().sort({ fraID: 1 });
@@ -106,7 +145,7 @@ async function updateFRA(req, res) {
       });
     }
 
-    const { fraName, startDate, endDate, targetAmount, suspended } = req.body;
+    const { fraName, startDate, endDate, targetAmount, suspended, category, description } = req.body;
 
     const fra = await FRA.findOne({ fraID });
     if (!fra) {
@@ -138,6 +177,8 @@ async function updateFRA(req, res) {
     if (endDate !== undefined) fra.endDate = endDate;
     if (targetAmount !== undefined) fra.targetAmount = targetAmount;
     if (suspended !== undefined) fra.suspended = suspended;
+    if (category !== undefined) fra.category = category; 
+    if (description !== undefined) fra.description = description;
 
     await fra.save();
 
@@ -257,6 +298,7 @@ async function monthlyReport(req, res) {
 module.exports = {
   createFRA,
   suspendFRA,
+  unsuspendFRA,
   viewFRA,
   updateFRA,
   searchFRA,
