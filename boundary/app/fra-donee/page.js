@@ -35,7 +35,7 @@ export default function DoneeFRAPage() {
       // Get ongoing FRAs only
       const ongoingFRAs = sortByFRAID(
         (data.fraList || []).filter(
-          (fra) => new Date(fra.endDate) >= new Date(),
+          (fra) => new Date(fra.endDate) >= new Date() && !fra.suspended,
         ),
       );
 
@@ -92,7 +92,9 @@ export default function DoneeFRAPage() {
 
       // Get ongoing FRAs only from the search result
       const ongoingFRAs = sortByFRAID(
-        (data || []).filter((fra) => new Date(fra.endDate) >= new Date()),
+        (data || []).filter(
+          (fra) => new Date(fra.endDate) >= new Date() && !fra.suspended,
+        ),
       );
 
       setFRAs(ongoingFRAs);
@@ -308,6 +310,8 @@ export default function DoneeFRAPage() {
               {[
                 { label: 'FRA ID', value: detailFRA.fraID },
                 { label: 'Name', value: detailFRA.fraName || '—' },
+                { label: 'Category', value: detailFRA.category || '—' },
+                { label: 'Description', value: detailFRA.description || '—' },
                 {
                   label: 'Target Amount',
                   value: `$ ${detailFRA.targetAmount.toLocaleString()}` || '—',

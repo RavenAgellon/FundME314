@@ -253,6 +253,8 @@ export default function FavouriteListPage() {
               {[
                 { label: 'FRA ID', value: detailFRA.fraID },
                 { label: 'Name', value: detailFRA.fraName || '—' },
+                { label: 'Category', value: detailFRA.category || '—' },
+                { label: 'Description', value: detailFRA.description || '—' },
                 {
                   label: 'Target Amount',
                   value: `$ ${detailFRA.targetAmount.toLocaleString()}` || '—',
