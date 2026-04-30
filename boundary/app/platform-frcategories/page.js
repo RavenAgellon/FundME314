@@ -72,8 +72,6 @@ export default function PlatformFRACategories() {
       description: description || ''
     };
 
-    // FRA IDs are managed server-side; do not send fraIDs from the frontend
-
     if (!payload.catName) {
       setFormError('Category name is required');
       return;
@@ -85,7 +83,6 @@ export default function PlatformFRACategories() {
         const res = await apiFetch(`/api/fra-category/${encodeURIComponent(originalName)}`, 'PUT', payload);
         const data = await res.json();
         if (data && (data === true || data.success)) {
-          // CHANGES - close the modal after update so users can continue managing the category list
           setShowCreateModal(false);
         } else {
           setFormError(data?.message || 'Failed to update category');
@@ -95,7 +92,6 @@ export default function PlatformFRACategories() {
         const res = await apiFetch('/api/fra-category', 'POST', payload);
         const data = await res.json();
         if (data && (data === true || data.success)) {
-          // CHANGES - close the modal after create so the new category is visible in the table
           setShowCreateModal(false);
         } else {
           setFormError(data?.message || 'Failed to create category');

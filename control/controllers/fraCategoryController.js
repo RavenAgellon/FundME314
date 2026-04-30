@@ -1,7 +1,7 @@
 const FRACategory = require('../../entity/FRACategory');
 const FRA = require('../../entity/FRA');
 
-// createFRACategory(catName, fraIDs, description) -> boolean
+// createFRACategory(catName, fraIDs, description)
 async function createFRACategory(req, res) {
   try {
     const { catName, fraIDs, description } = req.body;
@@ -12,10 +12,10 @@ async function createFRACategory(req, res) {
       description
     });
 
-    return res.json({ success: true, message: 'Category created successfully' }); // added success message for better frontend handling
+    return res.json({ success: true, message: 'Category created successfully' }); // added success message for the frontend to display
   } catch (err) {
     if (err && err.code === 11000) {
-      // CHANGES - handle duplicate key error for both catName and any other unique fields.
+      // CHANGES - handle duplicate key error.
       const duplicateField = err.keyPattern ? Object.keys(err.keyPattern)[0] : 'category name';
       const readableField = duplicateField === 'catName' ? 'Category name' : duplicateField;
       return res.status(400).json({
@@ -86,7 +86,7 @@ async function suspendFRACategory(req, res) {
   }
 }
 
-// CHANGES - restore the ability to reopen a suspended category from the admin screen
+// CHANGES - Added a unsuspendedFRACategory controller function.
 async function unsuspendFRACategory(req, res) {
   try {
     const catName = req.params.catName;
@@ -102,7 +102,7 @@ async function unsuspendFRACategory(req, res) {
   }
 }
 
-// searchFRACategory -> return category list matching name
+// searchFRACategory -> return category list matching name.
 async function searchFRACategory(req, res) {
   try {
     const searchName = req.query.catName || '';

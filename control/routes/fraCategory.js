@@ -14,6 +14,6 @@ router.put('/:catName', updateFRACategory);
 router.get('/search', searchFRACategory);
 router.get('/:catName', viewFRACategory);
 router.patch('/:catName/suspend', suspendFRACategory);
-router.patch('/:catName/unsuspend', unsuspendFRACategory); // Added route for unsuspending a category
+router.patch('/:catName/unsuspend', unsuspendFRACategory); // Added route for unsuspending a category that links to the new controller function, viewFRACategory -> return category details
 
 module.exports = router;
