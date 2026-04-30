@@ -12,9 +12,22 @@ async function createFRACategory(req, res) {
       description
     });
 
-    return res.json(true);
+    return res.json({ success: true, message: 'Category created successfully' }); // added success message for better frontend handling
   } catch (err) {
-    return res.json(false);
+    if (err && err.code === 11000) {
+      // CHANGES - handle duplicate key error for both catName and any other unique fields.
+      const duplicateField = err.keyPattern ? Object.keys(err.keyPattern)[0] : 'category name';
+      const readableField = duplicateField === 'catName' ? 'Category name' : duplicateField;
+      return res.status(400).json({
+        success: false,
+        message: `${readableField} already exists`
+      });
+    }
+
+    return res.status(400).json({
+      success: false,
+      message: err && err.message ? err.message : 'Failed to create category'
+    });
   }
 }
 
@@ -73,6 +86,22 @@ async function suspendFRACategory(req, res) {
   }
 }
 
+// CHANGES - restore the ability to reopen a suspended category from the admin screen
+async function unsuspendFRACategory(req, res) {
+  try {
+    const catName = req.params.catName;
+
+    await FRACategory.findOneAndUpdate(
+      { catName },
+      { suspended: false }
+    );
+
+    return res.json(true);
+  } catch (err) {
+    return res.json(false);
+  }
+}
+
 // searchFRACategory -> return category list matching name
 async function searchFRACategory(req, res) {
   try {
@@ -93,5 +122,6 @@ module.exports = {
   updateFRACategory,
   viewFRACategory,
   suspendFRACategory,
-  searchFRACategory
+  searchFRACategory,
+  unsuspendFRACategory
 };

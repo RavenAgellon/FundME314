@@ -13,8 +13,8 @@ export default function PlatformFRACategories() {
 
   // Form state
   const [catName, setCatName] = useState('');
-  const [fraIDsText, setFraIDsText] = useState('');
   const [description, setDescription] = useState('');
+  const [formError, setFormError] = useState('');
   const [editing, setEditing] = useState(false);
   const [originalName, setOriginalName] = useState('');
 
@@ -64,14 +64,6 @@ export default function PlatformFRACategories() {
     }
   }
 
-  function parseFraIDs(text) {
-    return text
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean)
-      .map((n) => Number(n))
-      .filter((n) => !Number.isNaN(n));
-  }
 
   async function submitCategory(e) {
     e && e.preventDefault();
@@ -80,63 +72,66 @@ export default function PlatformFRACategories() {
       description: description || ''
     };
 
-    // Only include fraIDs when editing
-    if (editing) {
-      payload.fraIDs = parseFraIDs(fraIDsText);
-    }
+    // FRA IDs are managed server-side; do not send fraIDs from the frontend
 
     if (!payload.catName) {
-      alert('Category name is required');
+      setFormError('Category name is required');
       return;
     }
 
     try {
+      setFormError('');
       if (editing) {
         const res = await apiFetch(`/api/fra-category/${encodeURIComponent(originalName)}`, 'PUT', payload);
         const data = await res.json();
-        if (data) {
-          alert('Category updated');
+        if (data && (data === true || data.success)) {
+          // CHANGES - close the modal after update so users can continue managing the category list
+          setShowCreateModal(false);
         } else {
-          alert('Failed to update category');
+          setFormError(data?.message || 'Failed to update category');
+          return;
         }
       } else {
         const res = await apiFetch('/api/fra-category', 'POST', payload);
         const data = await res.json();
-        if (data) {
-          alert('Category created');
+        if (data && (data === true || data.success)) {
+          // CHANGES - close the modal after create so the new category is visible in the table
+          setShowCreateModal(false);
         } else {
-          alert('Failed to create category');
+          setFormError(data?.message || 'Failed to create category');
+          return;
         }
       }
 
       // Reset form and refresh
       setCatName('');
-      setFraIDsText('');
       setDescription('');
       setEditing(false);
       setOriginalName('');
       fetchCategories();
     } catch (err) {
-      alert('Request failed');
+      setFormError(err?.message || 'Request failed');
     }
   }
 
   function startEdit(cat) {
+    // CHANGES - clear stale validation text before reopening the form for editing
+    setFormError('');
     setEditing(true);
     setOriginalName(cat.catName);
     setCatName(cat.catName);
-    setFraIDsText((cat.fraIDs || []).join(', '));
     setDescription(cat.description || '');
     setShowCreateModal(true);
   }
 
   async function suspendCategory(cat) {
-    if (!confirm(`Suspend category "${cat.catName}"?`)) return;
+    const action = cat.suspended ? 'unsuspend' : 'suspend';
+    if (!confirm(`${action === 'suspend' ? 'Suspend' : 'Unsuspend'} category "${cat.catName}"?`)) return;
     try {
-      const res = await apiFetch(`/api/fra-category/${encodeURIComponent(cat.catName)}/suspend`, 'PATCH');
+      const res = await apiFetch(`/api/fra-category/${encodeURIComponent(cat.catName)}/${action}`, 'PATCH');
       const data = await res.json();
-      if (data) alert('Category suspended');
-      else alert('Failed to suspend');
+      if (data) alert(`Category ${action}ed`);
+      else alert(`Failed to ${action}`);
     } catch (err) {
       alert('Request failed');
     } finally {
@@ -170,14 +165,13 @@ export default function PlatformFRACategories() {
             <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && searchCategory()} placeholder="Search categories" />
           </div>
           <button className="btn-primary" onClick={searchCategory}>Search</button>
-          <button className="btn-primary" onClick={() => { setEditing(false); setCatName(''); setFraIDsText(''); setDescription(''); setOriginalName(''); setShowCreateModal(true); }}>+ Create Category</button>
+          <button className="btn-primary" onClick={() => { setFormError(''); setEditing(false); setCatName(''); setDescription(''); setOriginalName(''); setShowCreateModal(true); }}>+ Create Category</button>
         </div>
 
         <div className="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>fraID</th>
                 <th>Category</th>
                 <th>Description</th>
                 <th>Status</th>
@@ -187,20 +181,15 @@ export default function PlatformFRACategories() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="loading-cell">Loading...</td>
+                  <td colSpan={4} className="loading-cell">Loading...</td>
                 </tr>
               ) : categories.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="empty-state">No categories found.</td>
+                  <td colSpan={4} className="empty-state">No categories found.</td>
                 </tr>
               ) : (
-                categories.map((cat, index) => (
+                categories.map((cat) => (
                   <tr key={cat.catName} onClick={() => viewCategoryFRAs(cat)} style={{ cursor: 'pointer' }}>
-                    <td>
-                      <code style={{ color: 'var(--gold)', fontSize: '0.8rem' }}>
-                        {index + 1}
-                      </code>
-                    </td>
                     <td style={{ fontWeight: 600 }}>{cat.catName}</td>
                     <td>{cat.description || '—'}</td>
                     <td>
@@ -210,7 +199,7 @@ export default function PlatformFRACategories() {
                     </td>
                     <td onClick={(e) => e.stopPropagation()}>
                       <button className="action-btn btn-edit" onClick={() => startEdit(cat)}>Edit</button>
-                      <button className="action-btn btn-suspend" onClick={() => suspendCategory(cat)}>Suspend</button>
+                      <button className="action-btn btn-suspend" onClick={() => suspendCategory(cat)}>{cat.suspended ? 'Unsuspend' : 'Suspend'}</button>
                     </td>
                   </tr>
                 ))
@@ -229,16 +218,16 @@ export default function PlatformFRACategories() {
               <form onSubmit={submitCategory} style={{ marginTop: '0.5rem' }}>
                 <div className="form-group">
                   <label>Category Name</label>
-                  <input type="text" placeholder="e.g. Education" value={catName} onChange={(e) => setCatName(e.target.value)} disabled={editing} style={editing ? {opacity:0.5, cursor:'not-allowed'} : {}} />
+                  <input type="text" placeholder="e.g. Education" value={catName} onChange={(e) => setCatName(e.target.value)} />
                 </div>
 
-                {editing && (
-                  <div className="form-group">
-                    <label>FRA IDs</label>
-                    <input type="text" placeholder="e.g. 1, 2, 3" value={fraIDsText} onChange={(e) => setFraIDsText(e.target.value)} />
-                    <div className="hint">Comma separated FRA IDs</div>
+                {formError && (
+                  <div style={{ color: 'var(--error)', marginTop: 6, marginBottom: 6, fontSize: '0.9rem' }}>
+                    {formError}
                   </div>
                 )}
+
+                {/* FRA IDs are backend-only and intentionally not shown in the UI */}
 
                 <div className="form-group">
                   <label>Description</label>
@@ -246,7 +235,7 @@ export default function PlatformFRACategories() {
                 </div>
 
                 <div className="modal-actions">
-                  <button type="button" className="btn-cancel" onClick={() => { setShowCreateModal(false); setEditing(false); setCatName(''); setFraIDsText(''); setDescription(''); setOriginalName(''); }}>Cancel</button>
+                  <button type="button" className="btn-cancel" onClick={() => { setShowCreateModal(false); setEditing(false); setFormError(''); setCatName(''); setDescription(''); setOriginalName(''); }}>Cancel</button>
                   <button className="btn-primary" type="submit">{editing ? 'Update Category' : 'Create Category'}</button>
                 </div>
               </form>
