@@ -59,7 +59,7 @@ export default function LoginPage() {
       <div className="login-wrapper">
         <div className="brand">
           <div className="brand-icon">🤝</div>
-          <h1>FundBridge</h1>
+          <h1>FundMe</h1>
           <p>Connect causes with those who care</p>
         </div>
 

@@ -1,7 +1,7 @@
 import './globals.css';
 
 export const metadata = {
-  title: 'FundBridge',
+  title: 'FundMe',
   description: 'Online Fundraising Platform',
 };
 
