@@ -40,15 +40,19 @@ async function searchUserAccount(req, res) {
     // $or means match ANY of these fields
     // $regex means search for the term anywhere in the text
     // $options: 'i' means case insensitive (john = John = JOHN)
-    const searchCondition = {
-      $or: [
-        { username:  { $regex: searchTerm, $options: 'i' } },
-        { name:      { $regex: searchTerm, $options: 'i' } },
-        { userID:    { $regex: searchTerm, $options: 'i' } },
-        { role:      { $regex: searchTerm, $options: 'i' } },
-        { email:     { $regex: searchTerm, $options: 'i' } }
-      ]
-    };
+    const orConditions = [
+      { username: { $regex: searchTerm, $options: 'i' } },
+      { name:     { $regex: searchTerm, $options: 'i' } },
+      { role:     { $regex: searchTerm, $options: 'i' } },
+      { email:    { $regex: searchTerm, $options: 'i' } }
+    ];
+
+    const numericID = Number(searchTerm);
+    if (!isNaN(numericID)) {
+      orConditions.push({ userID: numericID });
+    }
+
+    const searchCondition = { $or: orConditions };
 
     // Step 4: Search the database using the condition
     const matchingUsers = await User.find(searchCondition).select('-password').sort({ createdAt: -1 });

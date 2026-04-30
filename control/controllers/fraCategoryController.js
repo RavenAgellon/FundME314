@@ -1,7 +1,7 @@
 const FRACategory = require('../../entity/FRACategory');
 const FRA = require('../../entity/FRA');
 
-// createFRACategory(catName, fraIDs, description) -> boolean
+// createFRACategory(catName, fraIDs, description)
 async function createFRACategory(req, res) {
   try {
     const { catName, fraIDs, description } = req.body;
@@ -12,9 +12,22 @@ async function createFRACategory(req, res) {
       description
     });
 
-    return res.json(true);
+    return res.json({ success: true, message: 'Category created successfully' }); // added success message for the frontend to display
   } catch (err) {
-    return res.json(false);
+    if (err && err.code === 11000) {
+      // CHANGES - handle duplicate key error.
+      const duplicateField = err.keyPattern ? Object.keys(err.keyPattern)[0] : 'category name';
+      const readableField = duplicateField === 'catName' ? 'Category name' : duplicateField;
+      return res.status(400).json({
+        success: false,
+        message: `${readableField} already exists`
+      });
+    }
+
+    return res.status(400).json({
+      success: false,
+      message: err && err.message ? err.message : 'Failed to create category'
+    });
   }
 }
 
@@ -73,7 +86,23 @@ async function suspendFRACategory(req, res) {
   }
 }
 
-// searchFRACategory -> return category list matching name
+// CHANGES - Added a unsuspendedFRACategory controller function.
+async function unsuspendFRACategory(req, res) {
+  try {
+    const catName = req.params.catName;
+
+    await FRACategory.findOneAndUpdate(
+      { catName },
+      { suspended: false }
+    );
+
+    return res.json(true);
+  } catch (err) {
+    return res.json(false);
+  }
+}
+
+// searchFRACategory -> return category list matching name.
 async function searchFRACategory(req, res) {
   try {
     const searchName = req.query.catName || '';
@@ -93,5 +122,6 @@ module.exports = {
   updateFRACategory,
   viewFRACategory,
   suspendFRACategory,
-  searchFRACategory
+  searchFRACategory,
+  unsuspendFRACategory
 };
