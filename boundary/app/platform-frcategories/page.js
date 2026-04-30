@@ -33,7 +33,6 @@ export default function PlatformFRACategories() {
     displayPage();
   }, []);
 
-  
   async function fetchCategories() {
     setLoading(true);
     try {
@@ -45,6 +44,24 @@ export default function PlatformFRACategories() {
     } finally {
       setLoading(false);
     }
+  }
+
+  function resetCategoryForm() {
+    setCatName('');
+    setDescription('');
+    setFormError('');
+    setEditing(false);
+    setOriginalName('');
+  }
+
+  function openCreateModal() {
+    resetCategoryForm();
+    setShowCreateModal(true);
+  }
+
+  function closeCategoryModal() {
+    setShowCreateModal(false);
+    resetCategoryForm();
   }
 
   // Search function for categories based on catName.
@@ -66,9 +83,7 @@ export default function PlatformFRACategories() {
     }
   }
 
-
-  async function submitCategory(e) {
-    e && e.preventDefault();
+  async function createCategory() {
     const payload = {
       catName: catName.trim(),
       description: description || ''
@@ -76,44 +91,69 @@ export default function PlatformFRACategories() {
 
     if (!payload.catName) {
       setFormError('Category name is required');
-      return;
+      return false;
     }
 
     try {
       setFormError('');
-      if (editing) {
-        const res = await apiFetch(`/api/fra-category/${encodeURIComponent(originalName)}`, 'PUT', payload);
-        const data = await res.json();
-        if (data && (data === true || data.success)) {
-          setShowCreateModal(false);
-        } else {
-          setFormError(data?.message || 'Failed to update category');
-          return;
-        }
-      } else {
-        const res = await apiFetch('/api/fra-category', 'POST', payload);
-        const data = await res.json();
-        if (data && (data === true || data.success)) {
-          setShowCreateModal(false);
-        } else {
-          setFormError(data?.message || 'Failed to create category');
-          return;
-        }
+      const res = await apiFetch('/api/fra-category', 'POST', payload);
+      const data = await res.json();
+
+      if (data && (data === true || data.success)) {
+        closeCategoryModal();
+        fetchCategories();
+        return true;
       }
 
-      // Reset form and refresh
-      setCatName('');
-      setDescription('');
-      setEditing(false);
-      setOriginalName('');
-      fetchCategories();
+      setFormError(data?.message || 'Failed to create category');
+      return false;
     } catch (err) {
       setFormError(err?.message || 'Request failed');
+      return false;
     }
   }
 
-  function updateStartEdit(cat) {
-    // CHANGES - clear stale validation text before reopening the form for editing
+  async function updateCategory() {
+    const payload = {
+      catName: catName.trim(),
+      description: description || ''
+    };
+
+    if (!payload.catName) {
+      setFormError('Category name is required');
+      return false;
+    }
+
+    try {
+      setFormError('');
+      const res = await apiFetch(`/api/fra-category/${encodeURIComponent(originalName)}`, 'PUT', payload);
+      const data = await res.json();
+
+      if (data && (data === true || data.success)) {
+        closeCategoryModal();
+        fetchCategories();
+        return true;
+      }
+
+      setFormError(data?.message || 'Failed to update category');
+      return false;
+    } catch (err) {
+      setFormError(err?.message || 'Request failed');
+      return false;
+    }
+  }
+
+  async function handleCategorySubmit(e) {
+    e && e.preventDefault();
+
+    if (editing) {
+      return updateCategory();
+    }
+
+    return createCategory();
+  }
+
+  function startEdit(cat) {
     setFormError('');
     setEditing(true);
     setOriginalName(cat.catName);
@@ -165,7 +205,7 @@ export default function PlatformFRACategories() {
             <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && searchCategory()} placeholder="Search categories" />
           </div>
           <button className="btn-primary" onClick={searchCategory}>Search</button>
-          <button className="btn-primary" onClick={() => { setFormError(''); setEditing(false); setCatName(''); setDescription(''); setOriginalName(''); setShowCreateModal(true); }}>+ Create Category</button>
+          <button className="btn-primary" onClick={openCreateModal}>+ Create Category</button>
         </div>
 
         <div className="table-wrap">
@@ -198,7 +238,7 @@ export default function PlatformFRACategories() {
                       </span>
                     </td>
                     <td onClick={(e) => e.stopPropagation()}>
-                      <button className="action-btn btn-edit" onClick={() => updateStartEdit(cat)}>Edit</button>
+                      <button className="action-btn btn-edit" onClick={() => startEdit(cat)}>Edit</button>
                       <button className="action-btn btn-suspend" onClick={() => suspendCategory(cat)}>{cat.suspended ? 'Unsuspend' : 'Suspend'}</button>
                     </td>
                   </tr>
@@ -211,11 +251,11 @@ export default function PlatformFRACategories() {
 
         {/* Create / Edit Category Modal */}
         {showCreateModal && (
-          <div className="modal-overlay active" onClick={(e) => e.target === e.currentTarget && setShowCreateModal(false)}>
+          <div className="modal-overlay active" onClick={(e) => e.target === e.currentTarget && closeCategoryModal()}>
             <div className="modal">
               <h3>{editing ? 'Update Category' : 'Create Category'}</h3>
 
-              <form onSubmit={submitCategory} style={{ marginTop: '0.5rem' }}>
+              <form onSubmit={handleCategorySubmit} style={{ marginTop: '0.5rem' }}>
                 <div className="form-group">
                   <label>Category Name</label>
                   <input type="text" placeholder="e.g. Education" value={catName} onChange={(e) => setCatName(e.target.value)} />
@@ -235,7 +275,7 @@ export default function PlatformFRACategories() {
                 </div>
 
                 <div className="modal-actions">
-                  <button type="button" className="btn-cancel" onClick={() => { setShowCreateModal(false); setEditing(false); setFormError(''); setCatName(''); setDescription(''); setOriginalName(''); }}>Cancel</button>
+                  <button type="button" className="btn-cancel" onClick={closeCategoryModal}>Cancel</button>
                   <button className="btn-primary" type="submit">{editing ? 'Update Category' : 'Create Category'}</button>
                 </div>
               </form>
