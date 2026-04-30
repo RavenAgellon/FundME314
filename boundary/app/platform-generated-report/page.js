@@ -4,10 +4,6 @@ import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import { requireAuth, apiFetch } from '@/lib/auth';
 
-function formatNumber(value) {
-  return Number(value || 0).toLocaleString();
-}
-
 function getTodayFields() {
   const today = new Date();
   return {
@@ -15,17 +11,6 @@ function getTodayFields() {
     month: String(today.getMonth() + 1).padStart(2, '0'),
     year: String(today.getFullYear()),
   };
-}
-
-function ReportResult({ label, value, loading }) {
-  return (
-    <div className="report-result">
-      <div className="report-result-label">{label}</div>
-      <div className="report-result-value">
-        {loading ? 'Loading...' : formatNumber(value)}
-      </div>
-    </div>
-  );
 }
 
 export default function PlatformGeneratedReportPage() {
@@ -127,26 +112,31 @@ export default function PlatformGeneratedReportPage() {
     }
   }
 
-  function badgeStyle() {
+  // Style Functions
+  function reportContainerStyle() {
     return {
-      background: '#C9A84C22',
-      color: '#C9A84C',
-      padding: '2px 10px',
-      borderRadius: '20px',
-      fontSize: '1.3rem',
-      fontWeight: 500,
-      textTransform: 'uppercase',
-      letterSpacing: '0.5px',
-      margin: '0 6px',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
     };
   }
 
-  function reportStyle() {
+  function reportAttrContainerStyle() {
+    return {
+      display: 'grid',
+      gap: '0.75rem',
+      marginTop: '1.25rem',
+    };
+  }
+
+  function reportAttrStyle() {
     return {
       display: 'flex',
-      justifyContent: 'center',
+      justifyContent: 'space-between',
       alignItems: 'center',
-      marginTop: '3rem',
+      borderBottom: '1px solid rgba(255,255,255,0.15)',
+      paddingBottom: '0.6rem',
+      gap: '8rem',
     };
   }
 
@@ -290,14 +280,21 @@ export default function PlatformGeneratedReportPage() {
 
         {/* Display Report */}
         {reportType === 'daily' && (
-          <div style={reportStyle()}>
+          <div style={reportContainerStyle()}>
             {loading ? (
               <h2>Loading...</h2>
             ) : (
               <>
-                <h2>{dailyTotal === 0 ? 'No' : dailyTotal} FRAs created on</h2>
-                <div style={badgeStyle()}>
-                  {selectedDate.toLocaleDateString('en-GB')}
+                <h2 style={{ marginTop: '2.5rem' }}>Daily Report</h2>
+                <div style={reportAttrContainerStyle()}>
+                  <div style={reportAttrStyle()}>
+                    <span>Date</span>
+                    <span>{selectedDate.toLocaleDateString('en-GB')}</span>
+                  </div>
+                  <div style={reportAttrStyle()}>
+                    <span>Created FRAs</span>
+                    <span>{dailyTotal}</span>
+                  </div>
                 </div>
               </>
             )}
@@ -305,21 +302,24 @@ export default function PlatformGeneratedReportPage() {
         )}
 
         {reportType === 'weekly' && (
-          <div style={reportStyle()}>
+          <div style={reportContainerStyle()}>
             {loading ? (
               <h2>Loading...</h2>
             ) : (
               <>
-                <h2>
-                  {weeklyTotal === 0 ? 'No' : weeklyTotal} FRAs created
-                  from{' '}
-                </h2>
-                <div style={badgeStyle()}>
-                  {selectedDate.toLocaleDateString('en-GB')}{' '}
-                </div>
-                <h2>to </h2>
-                <div style={badgeStyle()}>
-                  {endDate.toLocaleDateString('en-GB')}
+                <h2 style={{ marginTop: '2.5rem' }}>Weekly Report</h2>
+                <div style={reportAttrContainerStyle()}>
+                  <div style={reportAttrStyle()}>
+                    <span>Date</span>
+                    <span>
+                      {`${selectedDate.toLocaleDateString('en-GB')} - 
+                        ${endDate.toLocaleDateString('en-GB')}`}
+                    </span>
+                  </div>
+                  <div style={reportAttrStyle()}>
+                    <span>Created FRAs</span>
+                    <span>{weeklyTotal}</span>
+                  </div>
                 </div>
               </>
             )}
@@ -327,17 +327,25 @@ export default function PlatformGeneratedReportPage() {
         )}
 
         {reportType === 'monthly' && (
-          <div style={reportStyle()}>
+          <div style={reportContainerStyle()}>
             {loading ? (
               <h2>Loading...</h2>
             ) : (
               <>
-                <h2>
-                  {monthlyTotal === 0 ? 'No' : monthlyTotal} FRAs created
-                  on{' '}
-                </h2>
-                <div style={badgeStyle()}>
-                  {`${selectedDate.toLocaleString('en-US', { month: 'long' })} ${selectedDate.getFullYear()}`}
+                <h2 style={{ marginTop: '2.5rem' }}>Monthly Report</h2>
+                <div style={reportAttrContainerStyle()}>
+                  <div style={reportAttrStyle()}>
+                    <span>Date</span>
+                    <span>
+                      {`${selectedDate.toLocaleDateString('en-GB', {
+                        month: 'long',
+                      })} ${selectedDate.getFullYear()}`}
+                    </span>
+                  </div>
+                  <div style={reportAttrStyle()}>
+                    <span>Created FRAs</span>
+                    <span>{monthlyTotal}</span>
+                  </div>
                 </div>
               </>
             )}
