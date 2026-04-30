@@ -11,7 +11,7 @@ export default function PlatformFRACategories() {
   const [categories, setCategories] = useState([]);
   const [search, setSearch] = useState('');
 
-  // Form state
+  // Form state for creating/updating categories
   const [catName, setCatName] = useState('');
   const [description, setDescription] = useState('');
   const [formError, setFormError] = useState('');
@@ -33,6 +33,7 @@ export default function PlatformFRACategories() {
     displayPage();
   }, []);
 
+  
   async function fetchCategories() {
     setLoading(true);
     try {
@@ -46,6 +47,7 @@ export default function PlatformFRACategories() {
     }
   }
 
+  // Search function for categories based on catName.
   async function searchCategory() {
     if (!search.trim()) {
       fetchCategories();
@@ -110,7 +112,7 @@ export default function PlatformFRACategories() {
     }
   }
 
-  function startEdit(cat) {
+  function updateStartEdit(cat) {
     // CHANGES - clear stale validation text before reopening the form for editing
     setFormError('');
     setEditing(true);
@@ -120,6 +122,7 @@ export default function PlatformFRACategories() {
     setShowCreateModal(true);
   }
 
+  //  suspend or unsuspend category based on current state
   async function suspendCategory(cat) {
     const action = cat.suspended ? 'unsuspend' : 'suspend';
     if (!confirm(`${action === 'suspend' ? 'Suspend' : 'Unsuspend'} category "${cat.catName}"?`)) return;
@@ -135,6 +138,7 @@ export default function PlatformFRACategories() {
     }
   }
 
+  // View FRAs in a category
   async function viewCategoryFRAs(cat) {
     try {
       const res = await apiFetch(`/api/fra-category/${encodeURIComponent(cat.catName)}`, 'GET');
@@ -194,7 +198,7 @@ export default function PlatformFRACategories() {
                       </span>
                     </td>
                     <td onClick={(e) => e.stopPropagation()}>
-                      <button className="action-btn btn-edit" onClick={() => startEdit(cat)}>Edit</button>
+                      <button className="action-btn btn-edit" onClick={() => updateStartEdit(cat)}>Edit</button>
                       <button className="action-btn btn-suspend" onClick={() => suspendCategory(cat)}>{cat.suspended ? 'Unsuspend' : 'Suspend'}</button>
                     </td>
                   </tr>
