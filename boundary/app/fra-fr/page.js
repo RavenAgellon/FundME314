@@ -337,8 +337,7 @@ export default function FundraiserOngoingFRAPage() {
           className="toolbar"
           style={{
             marginBottom: '2rem',
-            justifyContent: 'space-between',
-            gap: '1rem',
+            gap: '0.75rem',
             flexWrap: 'wrap',
           }}
         >
@@ -354,7 +353,6 @@ export default function FundraiserOngoingFRAPage() {
             <button
               className="btn-primary"
               onClick={searchFRA}
-              style={{ marginLeft: '1rem' }}
             >
               Search
             </button>
