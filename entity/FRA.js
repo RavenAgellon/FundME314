@@ -10,6 +10,7 @@ const fraSchema = new mongoose.Schema({
   description: { type: String, default: '' },
   targetAmount: { type: Number, required: true, min: 0 },
   suspended: { type: Boolean, default: false },
+  viewCount: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now },
 });
 

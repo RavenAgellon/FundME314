@@ -10,13 +10,15 @@ const {
   searchCompletedFRA,
   dailyReport,
   weeklyReport,
-  monthlyReport
+  monthlyReport,
+  checkView
 } = require('../controllers/fraController');
 
 router.post('/', createFRA);
 router.get('/search', searchFRA);
 router.get('/completed', searchCompletedFRA);
 router.get('/', viewFRA);
+router.get('/view/:fraID', checkView);
 router.put('/:fraID', updateFRA);
 router.patch('/:fraID/suspend', suspendFRA);
 router.patch('/:fraID/unsuspend', unsuspendFRA);

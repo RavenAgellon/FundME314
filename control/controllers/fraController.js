@@ -119,6 +119,8 @@ async function unsuspendFRA(req, res) {
 
 async function viewFRA(req, res) {
   try {
+    await FRA.updateMany({}, { $inc: { viewCount: 1 } });
+
     const fraList = await FRA.find().sort({ fraID: 1 });
 
     return res.json({
@@ -294,12 +296,27 @@ async function monthlyReport(req, res) {
     return res.json(0);
   }
 }
+async function checkView(req, res) {
+  try {
+    const fraID = Number(req.params.fraID);
 
+    const fra = await FRA.findOne({ fraID });
+
+    if (!fra) {
+      return res.json(0);
+    }
+
+    return res.json(fra.viewCount || 0);
+  } catch (err) {
+    return res.json(0);
+  }
+}
 module.exports = {
   createFRA,
   suspendFRA,
   unsuspendFRA,
   viewFRA,
+  checkView,
   updateFRA,
   searchFRA,
   searchCompletedFRA,
