@@ -103,6 +103,21 @@ export default function FavouriteListPage() {
     );
   }
 
+  function checkSuspended(FRA) {
+    if (FRA.suspended) {
+      const confirmed = confirm(
+        'This FRA has been suspended by the fund raiser. Would you like to remove from your favourite list?',
+      );
+
+      if (confirmed) {
+        removeSavedFRA(FRA.fraID);
+      }
+    } else {
+      // if the FRA is active, show details
+      setDetailFRA(FRA);
+    }
+  }
+
   // For ongoing FRAs
   function getDaysLeft(endDate) {
     const today = new Date();
@@ -198,9 +213,7 @@ export default function FavouriteListPage() {
                     </td>
                     <td>
                       <span
-                        onClick={() => {
-                          setDetailFRA(FRA);
-                        }}
+                        onClick={() => checkSuspended(FRA)}
                         style={{
                           cursor: 'pointer',
                           color: 'var(--text)',
