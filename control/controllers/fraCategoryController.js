@@ -102,15 +102,36 @@ async function unsuspendFRACategory(req, res) {
   }
 }
 
-// searchFRACategory -> return category list matching name.
+// -------------------------------------------------------
+// SEARCH FRA CATEGORIES — match name or description
+// -------------------------------------------------------
 async function searchFRACategory(req, res) {
   try {
-    const searchName = req.query.catName || '';
+    // Step 1: Get the search term from the URL
+    // Example URL: /api/fra-category/search?catName=education
+    const searchTerm = req.query.catName || '';
 
-    const categoryList = await FRACategory.find({
-      catName: { $regex: searchName, $options: 'i' }
-    });
+    // Step 2: If search term is empty, return all categories
+    if (!searchTerm) {
+      const allCategories = await FRACategory.find({}).sort({ createdAt: -1 });
+      return res.json(allCategories);
+    }
 
+    // Step 3: Build the search condition
+    // $or means match ANY of these fields
+    // $regex means search for the term anywhere in the text
+    // $options: 'i' means case insensitive (education = Education = EDUCATION)
+    const orConditions = [
+      { catName: { $regex: searchTerm, $options: 'i' } },
+      { description: { $regex: searchTerm, $options: 'i' } }
+    ];
+
+    const searchCondition = { $or: orConditions };
+
+    // Step 4: Search the database using the condition
+    const categoryList = await FRACategory.find(searchCondition).sort({ createdAt: -1 });
+
+    // Step 5: Send the results back to the browser
     return res.json(categoryList);
   } catch (err) {
     return res.json([]);
