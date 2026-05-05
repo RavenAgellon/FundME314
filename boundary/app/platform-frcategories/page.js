@@ -164,18 +164,11 @@ export default function PlatformFRACategories() {
 
   //  suspend or unsuspend category based on current state
   async function suspendCategory(cat) {
-    const nextStateLabel = cat.suspended ? 'Unsuspend' : 'Suspend';
-    if (!confirm(`${nextStateLabel} category "${cat.catName}"?`)) return;
     try {
       const res = await apiFetch(`/api/fra-category/${encodeURIComponent(cat.catName)}/suspend`, 'PATCH');
       const data = await res.json();
-      if (data && (data.suspended !== undefined || data.message)) {
-        alert(data.message || `Category ${cat.suspended ? 'unsuspended' : 'suspended'}`);
-      } else {
-        alert('Failed to update category status');
-      }
     } catch (err) {
-      alert('Request failed');
+      // silently handle errors
     } finally {
       fetchCategories();
     }
@@ -292,12 +285,7 @@ export default function PlatformFRACategories() {
           <div className="modal">
             <h3>FRAs in Category "{viewFraList.catName}"</h3>
 
-            <div style={{
-              display: 'grid',
-              gap: '0.75rem',
-              marginBottom: '1.25rem',
-              marginTop: '1rem'
-            }}>
+            <div style={{ display: 'grid', gap: '0.75rem', marginBottom: '1.25rem', marginTop: '1rem' }}>
               {viewFraList.fraList.length === 0 ? (
                 <div style={{ color: 'var(--muted)', fontSize: '0.875rem', padding: '1rem', textAlign: 'center' }}>
                   No FRAs in this category.
@@ -311,14 +299,13 @@ export default function PlatformFRACategories() {
                       justifyContent: 'space-between',
                       alignItems: 'center',
                       borderBottom: '1px solid rgba(255,255,255,0.05)',
-                      paddingBottom: '0.6rem'
+                      paddingBottom: '0.8rem'
                     }}
                   >
-                    <div>
-                      <div style={{ fontSize: '0.9rem', color: 'var(--text)', fontWeight: 500 }}>{fra.fraName || '—'}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginTop: '2px' }}>FRA ID: {fra.fraID}</div>
+                    <div style={{ fontSize: '0.95rem', color: 'var(--text)', fontWeight: 600 }}>{fra.fraName || '—'}</div>
+                    <div style={fra.suspended ? { color: 'var(--error)', fontSize: '0.8rem', textTransform: 'uppercase', fontWeight: 600 } : { color: 'var(--success)', fontSize: '0.8rem', textTransform: 'uppercase', fontWeight: 600 }}>
+                      {fra.suspended ? 'Suspended' : 'Active'}
                     </div>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--gold)', fontWeight: 500 }}>$ {fra.targetAmount ? fra.targetAmount.toLocaleString() : '—'}</span>
                   </div>
                 ))
               )}

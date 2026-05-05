@@ -633,12 +633,10 @@ export default function FundraiserOngoingFRAPage() {
                 {
                   label: 'Category Description',
                   value: getCategoryDescription(selectedFRA.category),
-                  long: true,
                 },
                 {
                   label: 'FRA Description',
                   value: selectedFRA.description || '—',
-                  long: true,
                 },
                 {
                   label: 'Target Amount',
@@ -668,9 +666,9 @@ export default function FundraiserOngoingFRAPage() {
                 <div
                   key={row.label}
                   style={{
-                    display: row.long ? 'block' : 'flex',
+                    display: 'flex',
                     justifyContent: 'space-between',
-                    alignItems: row.long ? 'flex-start' : 'center',
+                    alignItems: 'flex-start',
                     borderBottom: '1px solid rgba(255,255,255,0.05)',
                     paddingBottom: '0.6rem',
                     gap: '1rem',
@@ -684,7 +682,8 @@ export default function FundraiserOngoingFRAPage() {
                       letterSpacing: '0.6px',
                       fontWeight: 500,
                       display: 'block',
-                      marginBottom: row.long ? '0.35rem' : 0,
+                      minWidth: '140px',
+                      flexShrink: 0,
                     }}
                   >
                     {row.label}
@@ -694,8 +693,8 @@ export default function FundraiserOngoingFRAPage() {
                     style={{
                       fontSize: '0.875rem',
                       color: 'var(--text)',
-                      textAlign: row.long ? 'left' : 'right',
-                      maxWidth: row.long ? '100%' : '60%',
+                      textAlign: 'right',
+                      maxWidth: '60%',
                       lineHeight: 1.5,
                       overflowWrap: 'anywhere',
                       wordBreak: 'break-word',

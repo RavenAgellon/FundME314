@@ -56,14 +56,7 @@ async function updateFRACategory(req, res) {
 async function viewFRACategory(req, res) {
   try {
     const catName = req.params.catName;
-
-    const category = await FRACategory.findOne({ catName });
-    if (!category) return res.json([]);
-
-    const fraList = await FRA.find({
-      fraID: { $in: category.fraIDs }
-    });
-
+    const fraList = await FRA.find({ category: catName }).sort({ createdAt: -1 });
     return res.json(fraList);
   } catch (err) {
     return res.json([]);
