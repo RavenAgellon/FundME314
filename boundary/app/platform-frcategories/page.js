@@ -164,13 +164,16 @@ export default function PlatformFRACategories() {
 
   //  suspend or unsuspend category based on current state
   async function suspendCategory(cat) {
-    const action = cat.suspended ? 'unsuspend' : 'suspend';
-    if (!confirm(`${action === 'suspend' ? 'Suspend' : 'Unsuspend'} category "${cat.catName}"?`)) return;
+    const nextStateLabel = cat.suspended ? 'Unsuspend' : 'Suspend';
+    if (!confirm(`${nextStateLabel} category "${cat.catName}"?`)) return;
     try {
-      const res = await apiFetch(`/api/fra-category/${encodeURIComponent(cat.catName)}/${action}`, 'PATCH');
+      const res = await apiFetch(`/api/fra-category/${encodeURIComponent(cat.catName)}/suspend`, 'PATCH');
       const data = await res.json();
-      if (data) alert(`Category ${action}ed`);
-      else alert(`Failed to ${action}`);
+      if (data && (data.suspended !== undefined || data.message)) {
+        alert(data.message || `Category ${cat.suspended ? 'unsuspended' : 'suspended'}`);
+      } else {
+        alert('Failed to update category status');
+      }
     } catch (err) {
       alert('Request failed');
     } finally {

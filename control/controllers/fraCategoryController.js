@@ -75,30 +75,21 @@ async function suspendFRACategory(req, res) {
   try {
     const catName = req.params.catName;
 
-    await FRACategory.findOneAndUpdate(
-      { catName },
-      { suspended: true }
-    );
+    // Find the category
+    const category = await FRACategory.findOne({ catName });
+    if (!category) {
+      return res.status(404).json({ message: 'Category not found' });
+    }
 
-    return res.json(true);
+    // Toggle suspended status
+    category.suspended = category.suspended === true ? false : true;
+
+    // Save and return status
+    await category.save();
+    const statusMessage = category.suspended ? 'suspended' : 'unsuspended';
+    return res.json({ message: 'Category ' + statusMessage, suspended: category.suspended });
   } catch (err) {
-    return res.json(false);
-  }
-}
-
-// CHANGES - Added a unsuspendedFRACategory controller function.
-async function unsuspendFRACategory(req, res) {
-  try {
-    const catName = req.params.catName;
-
-    await FRACategory.findOneAndUpdate(
-      { catName },
-      { suspended: false }
-    );
-
-    return res.json(true);
-  } catch (err) {
-    return res.json(false);
+    return res.status(500).json({ message: 'Server error', error: err.message });
   }
 }
 
@@ -143,6 +134,5 @@ module.exports = {
   updateFRACategory,
   viewFRACategory,
   suspendFRACategory,
-  searchFRACategory,
-  unsuspendFRACategory
+  searchFRACategory
 };
