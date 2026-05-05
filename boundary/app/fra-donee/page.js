@@ -4,6 +4,8 @@ import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import { requireAuth, apiFetch } from '@/lib/auth';
 
+const CAT_API_BASE = 'http://localhost:3000/api/fra-category';
+
 export default function DoneeFRAPage() {
   const router = useRouter();
   const [user, setUser] = useState(null);
@@ -13,12 +15,14 @@ export default function DoneeFRAPage() {
   const [savedFRAs, setSavedFRAs] = useState([]);
   const [detailFRA, setDetailFRA] = useState(null);
   const [isSelectedFRASaved, setIsSelectedFRASaved] = useState(false);
+  const [categories, setCategories] = useState([]);
 
   function displayDoneePage() {
     const u = requireAuth('donee');
     if (u) {
       setUser(u);
       viewFRAs();
+      loadCategories();
     }
   }
 
@@ -26,12 +30,28 @@ export default function DoneeFRAPage() {
     displayDoneePage();
   }, []);
 
+  async function loadCategories() {
+    try {
+      const res = await fetch(`${CAT_API_BASE}/search`);
+      const data = await res.json();
+
+      setCategories(Array.isArray(data) ? data : []);
+    } catch {
+      setCategories([]);
+    }
+  }
+
+  function getCategoryDescription(catName) {
+    const selectedCategory = categories.find((cat) => cat.catName === catName);
+    return selectedCategory?.description || '—';
+  }
+
   async function viewFRAs() {
     setLoading(true);
     try {
       const res = await apiFetch('/api/fra', 'GET');
       const data = await res.json();
-
+      
       // Get ongoing FRAs only
       const ongoingFRAs = sortByFRAID(
         (data.fraList || []).filter(
@@ -54,9 +74,7 @@ export default function DoneeFRAPage() {
       const res = await apiFetch('/api/favourite-fra/view', 'GET');
       const data = await res.json();
 
-      if (!Array.isArray(fraList)) {
-        return;
-      }
+      if (!Array.isArray(fraList)) return;
 
       const saved = [];
 
@@ -76,7 +94,6 @@ export default function DoneeFRAPage() {
   }
 
   async function searchFRA() {
-    // If search box is empty, just load all ongoing FRAs
     if (!search.trim()) {
       viewFRAs();
       return;
@@ -90,7 +107,6 @@ export default function DoneeFRAPage() {
       );
       const data = await res.json();
 
-      // Get ongoing FRAs only from the search result
       const ongoingFRAs = sortByFRAID(
         (data || []).filter(
           (fra) => new Date(fra.endDate) >= new Date() && !fra.suspended,
@@ -117,11 +133,11 @@ export default function DoneeFRAPage() {
       (FRA) => FRA.fraID === detailFRA.fraID,
     );
 
-    // Delete FRA from favourite list
     if (isSelectedFRASaved) {
       try {
         const res = await apiFetch(`/api/favourite-fra/${fraID}`, 'DELETE');
         const data = await res.json();
+
         setIsSelectedFRASaved(false);
 
         const newState = [...savedFRAs];
@@ -133,7 +149,6 @@ export default function DoneeFRAPage() {
         alert('Failed to delete FRA from favourite list.');
       }
     } else {
-      // Save FRA to favourite list
       try {
         const res = await apiFetch(`/api/favourite-fra/${fraID}`, 'POST');
         const data = await res.json();
@@ -154,6 +169,7 @@ export default function DoneeFRAPage() {
   function badgeStyle(status) {
     const map = { not_saved: '#C9A84C', saved: '#C896DC' };
     const color = map[status] || '#9999BB';
+
     return {
       background: `${color}22`,
       color,
@@ -188,6 +204,7 @@ export default function DoneeFRAPage() {
   return (
     <>
       <Navbar role="Donee" username={user.name} />
+
       <div className="page">
         <span
           className="back-link"
@@ -195,6 +212,7 @@ export default function DoneeFRAPage() {
         >
           ← Back to Dashboard
         </span>
+
         <h2>Ongoing Fundraising Activities</h2>
         <p className="subtitle">
           View and search ongoing fundraising activities.
@@ -231,16 +249,17 @@ export default function DoneeFRAPage() {
                 <th>Favourite</th>
               </tr>
             </thead>
+
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="loading-cell">
+                  <td colSpan={5} className="loading-cell">
                     Loading...
                   </td>
                 </tr>
               ) : FRAs.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="empty-state">
+                  <td colSpan={5} className="empty-state">
                     No FRAs found.
                   </td>
                 </tr>
@@ -254,10 +273,21 @@ export default function DoneeFRAPage() {
                         {FRA.fraID || '—'}
                       </code>
                     </td>
+
                     <td>
                       <span
-                        onClick={() => {
-                          setDetailFRA(FRA);
+                        onClick={async () => {
+                          try {
+                            await apiFetch(`/api/fra/${FRA.fraID}/view`, 'PATCH');
+                          } catch (err) {
+                            console.error('Failed to update view count:', err);
+                          }
+
+                          setDetailFRA({
+                            ...FRA,
+                            viewCount: (FRA.viewCount || 0) + 1,
+                          });
+
                           setIsSelectedFRASaved(savedFRAs[index]);
                         }}
                         style={{
@@ -270,10 +300,15 @@ export default function DoneeFRAPage() {
                         {FRA.fraName || '—'}
                       </span>
                     </td>
+
                     <td>
-                      <span>$ {FRA.targetAmount.toLocaleString() || '—'}</span>
+                      <span>
+                        $ {(FRA.targetAmount || 0).toLocaleString()}
+                      </span>
                     </td>
+
                     <td>{`${getDaysLeft(FRA.endDate)} days left`}</td>
+
                     <td>
                       <span
                         style={badgeStyle(
@@ -308,13 +343,22 @@ export default function DoneeFRAPage() {
               }}
             >
               {[
-                { label: 'FRA ID', value: detailFRA.fraID },
+                { label: 'FRA ID', value: detailFRA.fraID || '—' },
                 { label: 'Name', value: detailFRA.fraName || '—' },
                 { label: 'Category', value: detailFRA.category || '—' },
-                { label: 'Description', value: detailFRA.description || '—' },
+                {
+                  label: 'Category Description',
+                  value: getCategoryDescription(detailFRA.category),
+                  long: true,
+                },
+                {
+                  label: 'FRA Description',
+                  value: detailFRA.description || '—',
+                  long: true,
+                },
                 {
                   label: 'Target Amount',
-                  value: `$ ${detailFRA.targetAmount.toLocaleString()}` || '—',
+                  value: `$ ${(detailFRA.targetAmount || 0).toLocaleString()}`,
                 },
                 {
                   label: 'Start Date',
@@ -322,18 +366,18 @@ export default function DoneeFRAPage() {
                 },
                 {
                   label: 'End Date',
-                  value:
-                    new Date(detailFRA.endDate).toLocaleDateString() || '—',
+                  value: new Date(detailFRA.endDate).toLocaleDateString(),
                 },
               ].map((row) => (
                 <div
                   key={row.label}
                   style={{
-                    display: 'flex',
+                    display: row.long ? 'block' : 'flex',
                     justifyContent: 'space-between',
-                    alignItems: 'center',
+                    alignItems: row.long ? 'flex-start' : 'center',
                     borderBottom: '1px solid rgba(255,255,255,0.05)',
                     paddingBottom: '0.6rem',
+                    gap: '1rem',
                   }}
                 >
                   <span
@@ -343,26 +387,46 @@ export default function DoneeFRAPage() {
                       textTransform: 'uppercase',
                       letterSpacing: '0.6px',
                       fontWeight: 500,
+                      display: 'block',
+                      marginBottom: row.long ? '0.35rem' : 0,
                     }}
                   >
                     {row.label}
                   </span>
-                  <span style={{ fontSize: '0.875rem', color: 'var(--text)' }}>
+
+                  <span
+                    style={{
+                      fontSize: '0.875rem',
+                      color: 'var(--text)',
+                      textAlign: row.long ? 'left' : 'right',
+                      maxWidth: row.long ? '100%' : '60%',
+                      lineHeight: 1.5,
+                      overflowWrap: 'anywhere',
+                      wordBreak: 'break-word',
+                      display: 'block',
+                    }}
+                  >
                     {row.value}
                   </span>
                 </div>
               ))}
             </div>
 
-            <div className="modal-actions">
+            <div
+              className="modal-actions"
+              style={{ justifyContent: 'space-between' }}
+            >
               <button
-                className={`action-btn ${isSelectedFRASaved ? 'btn-suspend' : 'btn-unsuspend'}`}
+                className={`action-btn ${
+                  isSelectedFRASaved ? 'btn-suspend' : 'btn-unsuspend'
+                }`}
                 onClick={() => saveFRA(detailFRA.fraID)}
               >
                 {isSelectedFRASaved
                   ? 'Remove from Favourite List'
                   : 'Save to Favourite List'}
               </button>
+
               <button className="btn-cancel" onClick={() => setDetailFRA(null)}>
                 Close
               </button>

@@ -5,6 +5,7 @@ const {
   suspendFRA,
   unsuspendFRA,
   viewFRA,
+  incrementView,
   updateFRA,
   searchFRA,
   searchCompletedFRA,
@@ -14,10 +15,11 @@ const {
   checkView
 } = require('../controllers/fraController');
 
+router.get('/', viewFRA);
 router.post('/', createFRA);
 router.get('/search', searchFRA);
 router.get('/completed', searchCompletedFRA);
-router.get('/', viewFRA);
+router.patch('/:fraID/view', incrementView);
 router.get('/view/:fraID', checkView);
 router.put('/:fraID', updateFRA);
 router.patch('/:fraID/suspend', suspendFRA);

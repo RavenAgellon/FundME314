@@ -4,10 +4,9 @@ import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import { requireAuth, apiFetch } from '@/lib/auth';
 
-// ========== API ENDPOINT ==========
 const API_BASE = 'http://localhost:3000/api/fra';
+const CAT_API_BASE = 'http://localhost:3000/api/fra-category';
 
-// ========== API HELPERS ==========
 async function createFRA(fra) {
   const res = await fetch(API_BASE, {
     method: 'POST',
@@ -16,11 +15,7 @@ async function createFRA(fra) {
   });
 
   const data = await res.json();
-
-  if (!res.ok) {
-    throw new Error(data.message || 'Error creating FRA');
-  }
-
+  if (!res.ok) throw new Error(data.message || 'Error creating FRA');
   return data.fra;
 }
 
@@ -32,11 +27,7 @@ async function updateFRA(fraID, updates) {
   });
 
   const data = await res.json();
-
-  if (!res.ok) {
-    throw new Error(data.message || 'Error updating FRA');
-  }
-
+  if (!res.ok) throw new Error(data.message || 'Error updating FRA');
   return data.fra;
 }
 
@@ -46,11 +37,7 @@ async function suspendFRA(fraID) {
   });
 
   const data = await res.json();
-
-  if (!res.ok) {
-    throw new Error(data.message || 'Error suspending FRA');
-  }
-
+  if (!res.ok) throw new Error(data.message || 'Error suspending FRA');
   return data.fra;
 }
 
@@ -60,11 +47,7 @@ async function unsuspendFRA(fraID) {
   });
 
   const data = await res.json();
-
-  if (!res.ok) {
-    throw new Error(data.message || 'Error unsuspending FRA');
-  }
-
+  if (!res.ok) throw new Error(data.message || 'Error unsuspending FRA');
   return data.fra;
 }
 
@@ -83,6 +66,7 @@ export default function FundraiserOngoingFRAPage() {
   const [search, setSearch] = useState('');
 
   const [savedCounts, setSavedCounts] = useState({});
+  const [categories, setCategories] = useState([]);
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -95,6 +79,7 @@ export default function FundraiserOngoingFRAPage() {
 
   const [title, setTitle] = useState('');
   const [desc, setDesc] = useState('');
+  const [categoryDesc, setCategoryDesc] = useState('');
   const [category, setCategory] = useState('');
   const [target, setTarget] = useState('');
   const [start, setStart] = useState('');
@@ -108,6 +93,7 @@ export default function FundraiserOngoingFRAPage() {
     if (u) {
       setUser(u);
       loadFRAs();
+      loadCategories();
     }
   }, []);
 
@@ -131,26 +117,35 @@ export default function FundraiserOngoingFRAPage() {
 
   async function fetchSavedCounts() {
     try {
-        const res = await apiFetch('/api/favourite-fra/counts', 'GET');
-        const data = await res.json();
+      const res = await apiFetch('/api/favourite-fra/counts', 'GET');
+      const data = await res.json();
 
-        const countMap = {};
-
-        data.forEach((item) => {
+      const countMap = {};
+      data.forEach((item) => {
         countMap[item.fraID] = item.savedCount;
-        });
+      });
 
-        setSavedCounts(countMap);
+      setSavedCounts(countMap);
     } catch {
-        setSavedCounts({});
+      setSavedCounts({});
     }
-}
+  }
+
+  async function loadCategories() {
+    try {
+      const res = await fetch(`${CAT_API_BASE}/search`);
+      const data = await res.json();
+
+      setCategories(Array.isArray(data) ? data : []);
+    } catch {
+      setCategories([]);
+    }
+  }
 
   async function loadFRAs() {
     setLoading(true);
 
     try {
-      // Use backend route same as donee pages
       const res = await fetch(`${API_BASE}`);
       const data = await res.json();
 
@@ -166,7 +161,6 @@ export default function FundraiserOngoingFRAPage() {
   }
 
   async function searchFRA() {
-    // If search box is empty, just load all ongoing FRAs
     if (!search.trim()) {
       loadFRAs();
       return;
@@ -184,7 +178,6 @@ export default function FundraiserOngoingFRAPage() {
       const searchedFRAs = data.fraList || data || [];
 
       setFRAs(getOngoingFRAs(searchedFRAs));
-
       await fetchSavedCounts();
     } catch {
       setFRAs([]);
@@ -192,6 +185,16 @@ export default function FundraiserOngoingFRAPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  function getCategoryDescription(catName) {
+    const selectedCategory = categories.find((cat) => cat.catName === catName);
+    return selectedCategory?.description || '—';
+  }
+
+  function handleCategoryChange(catName) {
+    setCategory(catName);
+    setCategoryDesc(getCategoryDescription(catName));
   }
 
   function openForm() {
@@ -202,6 +205,7 @@ export default function FundraiserOngoingFRAPage() {
     setTitle('');
     setDesc('');
     setCategory('');
+    setCategoryDesc('');
     setTarget('');
     setStart('');
     setEnd('');
@@ -217,6 +221,8 @@ export default function FundraiserOngoingFRAPage() {
     setTitle(fra.fraName || fra.title || '');
     setDesc(fra.description || '');
     setCategory(fra.category || '');
+    setCategoryDesc(getCategoryDescription(fra.category));
+
     setTarget(
       fra.targetAmount?.toString() || fra.target?.toString() || '',
     );
@@ -350,10 +356,7 @@ export default function FundraiserOngoingFRAPage() {
               onKeyDown={(e) => e.key === 'Enter' && searchFRA()}
               placeholder="Search by FRA name"
             />
-            <button
-              className="btn-primary"
-              onClick={searchFRA}
-            >
+            <button className="btn-primary" onClick={searchFRA}>
               Search
             </button>
           </div>
@@ -373,6 +376,7 @@ export default function FundraiserOngoingFRAPage() {
                 <th>Deadline</th>
                 <th>Status</th>
                 <th>Saved</th>
+                <th>Views</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -380,13 +384,13 @@ export default function FundraiserOngoingFRAPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="loading-cell">
+                  <td colSpan={8} className="loading-cell">
                     Loading...
                   </td>
                 </tr>
               ) : FRAs.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="empty-state">
+                  <td colSpan={8} className="empty-state">
                     No ongoing fundraising activities.
                   </td>
                 </tr>
@@ -437,6 +441,7 @@ export default function FundraiserOngoingFRAPage() {
                       </td>
 
                       <td>{savedCounts[fraID] || 0}</td>
+                      <td>{fra.viewCount || 0}</td>
 
                       <td>
                         <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -484,7 +489,10 @@ export default function FundraiserOngoingFRAPage() {
       </div>
 
       {showForm && (
-        <div className="modal-overlay active">
+        <div
+          className="modal-overlay active"
+          onClick={(e) => e.target === e.currentTarget && handleCancel()}
+        >
           <div className="modal" style={{ maxWidth: 540 }}>
             <h3 style={{ marginBottom: '1.25rem' }}>
               {editingId !== null
@@ -504,15 +512,31 @@ export default function FundraiserOngoingFRAPage() {
 
               <div className="form-group">
                 <label>Category</label>
-                <input
+                <select
                   value={category}
-                  onChange={(e) => setCategory(e.target.value)}
+                  onChange={(e) => handleCategoryChange(e.target.value)}
                   required
+                >
+                  <option value="">Select a category</option>
+                  {categories.map((cat) => (
+                    <option key={cat.catName} value={cat.catName}>
+                      {cat.catName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Category Description</label>
+                <textarea
+                  value={categoryDesc}
+                  readOnly
+                  placeholder="Category description will appear here"
                 />
               </div>
 
               <div className="form-group">
-                <label>Description</label>
+                <label>FRA Description</label>
                 <textarea
                   value={desc}
                   onChange={(e) => setDesc(e.target.value)}
@@ -582,57 +606,106 @@ export default function FundraiserOngoingFRAPage() {
       )}
 
       {showDetails && selectedFRA && (
-        <div className="modal-overlay active">
-          <div className="modal" style={{ maxWidth: 540 }}>
-            <h3 style={{ marginBottom: '1.25rem' }}>
-              Fundraising Activity Details
-            </h3>
+        <div
+          className="modal-overlay active"
+          onClick={(e) => e.target === e.currentTarget && closeDetails()}
+        >
+          <div className="modal">
+            <h3>FRA Details</h3>
 
-            <div className="form-group">
-              <label>FRA ID</label>
-              <p>{selectedFRA.fraID || selectedFRA.id}</p>
-            </div>
+            <div
+              style={{
+                display: 'grid',
+                gap: '0.75rem',
+                marginBottom: '1.25rem',
+              }}
+            >
+              {[
+                { label: 'FRA ID', value: selectedFRA.fraID || selectedFRA.id },
+                {
+                  label: 'Name',
+                  value: selectedFRA.fraName || selectedFRA.title || '—',
+                },
+                {
+                  label: 'Category',
+                  value: selectedFRA.category || '—',
+                },
+                {
+                  label: 'Category Description',
+                  value: getCategoryDescription(selectedFRA.category),
+                  long: true,
+                },
+                {
+                  label: 'FRA Description',
+                  value: selectedFRA.description || '—',
+                  long: true,
+                },
+                {
+                  label: 'Target Amount',
+                  value: `$ ${(selectedFRA.targetAmount || selectedFRA.target || 0).toLocaleString()}`,
+                },
+                {
+                  label: 'Start Date',
+                  value: formatDate(selectedFRA.startDate || selectedFRA.start),
+                },
+                {
+                  label: 'End Date',
+                  value: formatDate(selectedFRA.endDate || selectedFRA.end),
+                },
+                {
+                  label: 'Status',
+                  value: selectedFRA.suspended ? 'Suspended' : 'Active',
+                },
+                {
+                  label: 'Saved Count',
+                  value: savedCounts[selectedFRA.fraID || selectedFRA.id] || 0,
+                },
+                {
+                  label: 'View Count',
+                  value: selectedFRA.viewCount || 0,
+                },
+              ].map((row) => (
+                <div
+                  key={row.label}
+                  style={{
+                    display: row.long ? 'block' : 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: row.long ? 'flex-start' : 'center',
+                    borderBottom: '1px solid rgba(255,255,255,0.05)',
+                    paddingBottom: '0.6rem',
+                    gap: '1rem',
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: '0.78rem',
+                      color: 'var(--muted)',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.6px',
+                      fontWeight: 500,
+                      display: 'block',
+                      marginBottom: row.long ? '0.35rem' : 0,
+                    }}
+                  >
+                    {row.label}
+                  </span>
 
-            <div className="form-group">
-              <label>Name</label>
-              <p>{selectedFRA.fraName || selectedFRA.title}</p>
-            </div>
-
-            <div className="form-group">
-              <label>Category</label>
-              <p>{selectedFRA.category || '-'}</p>
-            </div>
-
-            <div className="form-group">
-              <label>Description</label>
-              <p>{selectedFRA.description || '-'}</p>
-            </div>
-
-            <div className="form-group">
-              <label>Target Amount</label>
-              <p>
-                $ {(selectedFRA.targetAmount || selectedFRA.target || 0).toLocaleString()}
-              </p>
-            </div>
-
-            <div className="form-group">
-              <label>Start Date</label>
-              <p>{formatDate(selectedFRA.startDate || selectedFRA.start)}</p>
-            </div>
-
-            <div className="form-group">
-              <label>End Date</label>
-              <p>{formatDate(selectedFRA.endDate || selectedFRA.end)}</p>
-            </div>
-
-            <div className="form-group">
-              <label>Status</label>
-              <p>{selectedFRA.suspended ? 'Suspended' : 'Active'}</p>
-            </div>
-
-            <div className="form-group">
-              <label>Saved Count</label>
-              <p>{savedCounts[selectedFRA.fraID || selectedFRA.id] || 0}</p>
+                  <span
+                    style={{
+                      fontSize: '0.875rem',
+                      color: 'var(--text)',
+                      textAlign: row.long ? 'left' : 'right',
+                      maxWidth: row.long ? '100%' : '60%',
+                      lineHeight: 1.5,
+                      overflowWrap: 'anywhere',
+                      wordBreak: 'break-word',
+                      display: 'block',
+                    }}
+                  >
+                    {row.value}
+                  </span>
+                </div>
+              ))}
             </div>
 
             <div

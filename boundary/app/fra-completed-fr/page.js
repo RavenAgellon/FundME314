@@ -57,7 +57,6 @@ export default function FundraiserCompletedFRAPage() {
     setLoading(true);
 
     try {
-      // Use backend route same as donee pages
       const res = await fetch(`${API_BASE}`);
       const data = await res.json();
 
@@ -71,7 +70,6 @@ export default function FundraiserCompletedFRAPage() {
   }
 
   async function searchFRA() {
-    // If search box is empty, just load all completed FRAs
     if (!search.trim()) {
       loadFRAs();
       return;
@@ -133,13 +131,7 @@ export default function FundraiserCompletedFRAPage() {
           </div>
         )}
 
-        <div
-          className="toolbar"
-          style={{
-            marginBottom: '2rem',
-            justifyContent: 'flex-start',
-          }}
-        >
+        <div className="toolbar" style={{ marginBottom: '2rem' }}>
           <div className="search-wrap" style={{ display: 'flex' }}>
             <span className="search-icon">🔍</span>
             <input
@@ -237,52 +229,96 @@ export default function FundraiserCompletedFRAPage() {
       </div>
 
       {showDetails && selectedFRA && (
-        <div className="modal-overlay active">
-          <div className="modal" style={{ maxWidth: 540 }}>
-            <h3 style={{ marginBottom: '1.25rem' }}>
-              Fundraising Activity Details
-            </h3>
+        <div
+          className="modal-overlay active"
+          onClick={(e) => e.target === e.currentTarget && closeDetails()}
+        >
+          <div className="modal">
+            <h3>FRA Details</h3>
 
-            <div className="form-group">
-              <label>FRA ID</label>
-              <p>{selectedFRA.fraID || selectedFRA.id}</p>
-            </div>
+            <div
+              style={{
+                display: 'grid',
+                gap: '0.75rem',
+                marginBottom: '1.25rem',
+              }}
+            >
+              {[
+                { label: 'FRA ID', value: selectedFRA.fraID || selectedFRA.id },
+                {
+                  label: 'Name',
+                  value: selectedFRA.fraName || selectedFRA.title || '—',
+                },
+                {
+                  label: 'Category',
+                  value: selectedFRA.category || '—',
+                },
+                {
+                  label: 'Category Description',
+                  value: selectedFRA.categoryDescription || '—',
+                  long: true,
+                },
+                {
+                  label: 'FRA Description',
+                  value: selectedFRA.description || '—',
+                  long: true,
+                },
+                {
+                  label: 'Target Amount',
+                  value: `$ ${(selectedFRA.targetAmount || selectedFRA.target || 0).toLocaleString()}`,
+                },
+                {
+                  label: 'Start Date',
+                  value: formatDate(selectedFRA.startDate || selectedFRA.start),
+                },
+                {
+                  label: 'End Date',
+                  value: formatDate(selectedFRA.endDate || selectedFRA.end),
+                },
+                { label: 'Status', value: 'Completed' },
+                { label: 'View Count', value: selectedFRA.viewCount || 0 },
+              ].map((row) => (
+                <div
+                  key={row.label}
+                  style={{
+                    display: row.long ? 'block' : 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: row.long ? 'flex-start' : 'center',
+                    borderBottom: '1px solid rgba(255,255,255,0.05)',
+                    paddingBottom: '0.6rem',
+                    gap: '1rem',
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: '0.78rem',
+                      color: 'var(--muted)',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.6px',
+                      fontWeight: 500,
+                      display: 'block',
+                      marginBottom: row.long ? '0.35rem' : 0,
+                    }}
+                  >
+                    {row.label}
+                  </span>
 
-            <div className="form-group">
-              <label>Name</label>
-              <p>{selectedFRA.fraName || selectedFRA.title}</p>
-            </div>
-
-            <div className="form-group">
-              <label>Category</label>
-              <p>{selectedFRA.category || '-'}</p>
-            </div>
-
-            <div className="form-group">
-              <label>Description</label>
-              <p>{selectedFRA.description || '-'}</p>
-            </div>
-
-            <div className="form-group">
-              <label>Target Amount</label>
-              <p>
-                $ {(selectedFRA.targetAmount || selectedFRA.target || 0).toLocaleString()}
-              </p>
-            </div>
-
-            <div className="form-group">
-              <label>Start Date</label>
-              <p>{formatDate(selectedFRA.startDate || selectedFRA.start)}</p>
-            </div>
-
-            <div className="form-group">
-              <label>End Date</label>
-              <p>{formatDate(selectedFRA.endDate || selectedFRA.end)}</p>
-            </div>
-
-            <div className="form-group">
-              <label>Status</label>
-              <p>Completed</p>
+                  <span
+                    style={{
+                      fontSize: '0.875rem',
+                      color: 'var(--text)',
+                      textAlign: row.long ? 'left' : 'right',
+                      maxWidth: row.long ? '100%' : '60%',
+                      lineHeight: 1.5,
+                      overflowWrap: 'anywhere',
+                      wordBreak: 'break-word',
+                      display: 'block',
+                    }}
+                  >
+                    {row.value}
+                  </span>
+                </div>
+              ))}
             </div>
 
             <div

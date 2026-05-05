@@ -116,11 +116,8 @@ async function unsuspendFRA(req, res) {
     });
   }
 }
-
 async function viewFRA(req, res) {
   try {
-    await FRA.updateMany({}, { $inc: { viewCount: 1 } });
-
     const fraList = await FRA.find().sort({ fraID: 1 });
 
     return res.json({
@@ -135,7 +132,42 @@ async function viewFRA(req, res) {
     });
   }
 }
+async function incrementView(req, res) {
+  try {
+    const fraID = Number(req.params.fraID);
 
+    if (Number.isNaN(fraID)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid FRA ID'
+      });
+    }
+
+    const fra = await FRA.findOneAndUpdate(
+      { fraID },
+      { $inc: { viewCount: 1 } },
+      { new: true }
+    );
+
+    if (!fra) {
+      return res.status(404).json({
+        success: false,
+        message: 'FRA not found'
+      });
+    }
+
+    return res.json({
+      success: true,
+      fra
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: err.message
+    });
+  }
+}
 async function updateFRA(req, res) {
   try {
     const fraID = Number(req.params.fraID);
@@ -316,6 +348,7 @@ module.exports = {
   suspendFRA,
   unsuspendFRA,
   viewFRA,
+  incrementView,
   checkView,
   updateFRA,
   searchFRA,
