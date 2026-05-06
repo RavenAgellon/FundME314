@@ -6,8 +6,8 @@ const {
   searchUserProfileCon,
   createUserProfileCon,
   updateUserProfileCon,
-  suspendUserProfileCon
-} = require('../controllers/userProfileController');
+  suspendUserProfileCon,
+} = require('../controllers/userProfilesController');
 
 router.get('/', viewUserProfileCon.viewUserProfile);
 router.get('/search', searchUserProfileCon.searchUserProfile);
