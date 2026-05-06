@@ -43,8 +43,43 @@ async function createFRA(req, res) {
     });
   }
 }
-
+//new function for suspend/unsuspend 
+// suspendFRA -> boolean toggle
 async function suspendFRA(req, res) {
+  try {
+    const fraID = Number(req.params.fraID);
+
+    // Find FRA
+    const fra = await FRA.findOne({ fraID });
+
+    if (!fra) {
+      return res.status(404).json({ message: 'FRA not found' });
+    }
+
+    // Toggle suspended status
+    fra.suspended = fra.suspended === true ? false : true;
+
+    // Save and return status
+    await fra.save();
+
+    const statusMessage = fra.suspended ? 'suspended' : 'unsuspended';
+
+    return res.json({
+      message: 'FRA ' + statusMessage,
+      suspended: fra.suspended
+    });
+
+  } catch (err) {
+    return res.status(500).json({
+      message: 'Server error',
+      error: err.message
+    });
+  }
+}
+
+//old function for suspend/unsuspend
+
+/*async function suspendFRA(req, res) {
   try {
     const fraID = Number(req.params.fraID);
 
@@ -115,7 +150,7 @@ async function unsuspendFRA(req, res) {
       error: err.message
     });
   }
-}
+} */
 async function viewFRA(req, res) {
   try {
     const fraList = await FRA.find().sort({ fraID: 1 });
@@ -346,7 +381,7 @@ async function checkView(req, res) {
 module.exports = {
   createFRA,
   suspendFRA,
-  unsuspendFRA,
+  //unsuspendFRA,
   viewFRA,
   incrementView,
   checkView,

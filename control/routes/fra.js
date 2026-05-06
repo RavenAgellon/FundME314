@@ -3,7 +3,6 @@ const router = express.Router();
 const {
   createFRA,
   suspendFRA,
-  unsuspendFRA,
   viewFRA,
   incrementView,
   updateFRA,
@@ -23,7 +22,6 @@ router.patch('/:fraID/view', incrementView);
 router.get('/view/:fraID', checkView);
 router.put('/:fraID', updateFRA);
 router.patch('/:fraID/suspend', suspendFRA);
-router.patch('/:fraID/unsuspend', unsuspendFRA);
 router.get('/report/daily', dailyReport);
 router.get('/report/weekly', weeklyReport);
 router.get('/report/monthly', monthlyReport);

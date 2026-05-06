@@ -37,18 +37,12 @@ async function suspendFRA(fraID) {
   });
 
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Error suspending FRA');
-  return data.fra;
-}
 
-async function unsuspendFRA(fraID) {
-  const res = await fetch(`${API_BASE}/${fraID}/unsuspend`, {
-    method: 'PATCH',
-  });
+  if (!res.ok) {
+    throw new Error(data.message || 'Error updating FRA status');
+  }
 
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Error unsuspending FRA');
-  return data.fra;
+  return data;
 }
 
 function formatDate(dateStr) {
@@ -136,7 +130,8 @@ export default function FundraiserOngoingFRAPage() {
       const res = await fetch(`${CAT_API_BASE}/search`);
       const data = await res.json();
 
-      setCategories(Array.isArray(data) ? data : []);
+      const categoryList = Array.isArray(data) ? data : [];
+      setCategories(categoryList.filter((cat) => !cat.suspended));
     } catch {
       setCategories([]);
     }
@@ -279,24 +274,17 @@ export default function FundraiserOngoingFRAPage() {
     setCreating(false);
     setTimeout(() => setSuccessMsg(''), 2200);
   }
-
-  async function handleSuspend(id) {
+  async function handleSuspendToggle(id) {
     setErrorMsg('');
 
     try {
-      await suspendFRA(id);
-      await loadFRAs();
-    } catch (error) {
-      setErrorMsg(error.message);
-    }
-  }
+      const result = await suspendFRA(id);
 
-  async function handleUnsuspend(id) {
-    setErrorMsg('');
+      setSuccessMsg(result.message);
 
-    try {
-      await unsuspendFRA(id);
       await loadFRAs();
+
+      setTimeout(() => setSuccessMsg(''), 2200);
     } catch (error) {
       setErrorMsg(error.message);
     }
@@ -425,16 +413,19 @@ export default function FundraiserOngoingFRAPage() {
 
                       <td>
                         <span
-                          style={{
-                            background: fra.suspended
-                              ? 'rgba(240,112,112,0.15)'
-                              : 'rgba(201,168,76,0.15)',
-                            color: fra.suspended ? '#f07070' : '#C9A84C',
-                            padding: '4px 12px',
-                            borderRadius: '999px',
-                            fontSize: '0.75rem',
-                            fontWeight: 600,
-                          }}
+                          style={
+                            fra.suspended
+                              ? {
+                                  color: 'var(--error)',
+                                  fontSize: '0.8rem',
+                                  textTransform: 'uppercase',
+                                }
+                              : {
+                                  color: 'var(--success)',
+                                  fontSize: '0.8rem',
+                                  textTransform: 'uppercase',
+                                }
+                          }
                         >
                           {fra.suspended ? 'Suspended' : 'Active'}
                         </span>
@@ -443,41 +434,20 @@ export default function FundraiserOngoingFRAPage() {
                       <td>{savedCounts[fraID] || 0}</td>
                       <td>{fra.viewCount || 0}</td>
 
-                      <td>
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                          <button
-                            className="action-btn btn-edit"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openEditForm(fra);
-                            }}
-                            disabled={fra.suspended}
-                          >
-                            Edit
-                          </button>
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <button
+                          className="action-btn btn-edit"
+                          onClick={() => openEditForm(fra)}
+                        >
+                          Edit
+                        </button>
 
-                          {fra.suspended ? (
-                            <button
-                              className="action-btn btn-edit"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleUnsuspend(fraID);
-                              }}
-                            >
-                              Unsuspend
-                            </button>
-                          ) : (
-                            <button
-                              className="action-btn btn-suspend"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleSuspend(fraID);
-                              }}
-                            >
-                              Suspend
-                            </button>
-                          )}
-                        </div>
+                        <button
+                          className="action-btn btn-suspend"
+                          onClick={() => handleSuspendToggle(fraID)}
+                        >
+                          {fra.suspended ? 'Unsuspend' : 'Suspend'}
+                        </button>
                       </td>
                     </tr>
                   );
