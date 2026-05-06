@@ -1,29 +1,30 @@
 const express = require('express');
 const router = express.Router();
+
 const {
-  createFRA,
-  suspendFRA,
-  viewFRA,
-  incrementView,
-  updateFRA,
-  searchFRA,
-  searchCompletedFRA,
-  dailyReport,
-  weeklyReport,
-  monthlyReport,
-  checkView
+  createFRACon,
+  suspendFRACon,
+  viewFRACon,
+  incrementViewCon,
+  checkViewCon,
+  updateFRACon,
+  searchFRACon,
+  searchCompletedFRACon,
+  dailyReportCon,
+  weeklyReportCon,
+  monthlyReportCon
 } = require('../controllers/fraController');
 
-router.get('/', viewFRA);
-router.post('/', createFRA);
-router.get('/search', searchFRA);
-router.get('/completed', searchCompletedFRA);
-router.patch('/:fraID/view', incrementView);
-router.get('/view/:fraID', checkView);
-router.put('/:fraID', updateFRA);
-router.patch('/:fraID/suspend', suspendFRA);
-router.get('/report/daily', dailyReport);
-router.get('/report/weekly', weeklyReport);
-router.get('/report/monthly', monthlyReport);
+router.post('/', createFRACon.createFRA);
+router.patch('/:fraID/suspend', suspendFRACon.suspendFRA);
+router.get('/', viewFRACon.viewFRA);
+router.patch('/:fraID/view', incrementViewCon.incrementView);
+router.get('/:fraID/views', checkViewCon.checkView);
+router.put('/:fraID', updateFRACon.updateFRA);
+router.get('/search/name', searchFRACon.searchFRA);
+router.get('/search/completed', searchCompletedFRACon.searchCompletedFRA);
+router.get('/report/daily', dailyReportCon.dailyReport);
+router.get('/report/weekly', weeklyReportCon.weeklyReport);
+router.get('/report/monthly', monthlyReportCon.monthlyReport);
 
 module.exports = router;

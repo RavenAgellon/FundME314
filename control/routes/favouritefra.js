@@ -2,27 +2,22 @@ const express = require('express');
 const router = express.Router();
 const { protect, authorize } = require('../middleware/auth');
 const {
-  saveFRA,
-  removeFRA,
-  viewFavouriteFRA,
-  searchFavouriteFRA,
-  getFavouriteCounts,
+  saveFRACon,
+  removeFRACon,
+  viewFavouriteFRACon,
+  searchFavouriteFRACon,
+  getFavouriteCountsCon,
 } = require('../controllers/favouriteFRAController');
 
 router.use(protect);
 
-// -------------------------------------------------------
 // VIEW HOW MANY TIMES EACH FRA IS SAVED
-// Allow BOTH fundraiser and donee (safe + avoids auth bugs)
-// -------------------------------------------------------
-router.get('/counts', authorize('fundraiser', 'donee'), getFavouriteCounts);
+router.get('/counts', authorize('fundraiser', 'donee'), getFavouriteCountsCon.getFavouriteCounts);
 
-// -------------------------------------------------------
 // DONEE ROUTES
-// -------------------------------------------------------
-router.get('/view', authorize('donee'), viewFavouriteFRA);     // view all saved FRAs
-router.get('/search', authorize('donee'), searchFavouriteFRA); // search saved FRAs
-router.post('/:fraID', authorize('donee'), saveFRA);           // save an FRA
-router.delete('/:fraID', authorize('donee'), removeFRA);       // remove FRA
+router.get('/view', authorize('donee'), viewFavouriteFRACon.viewFavouriteFRA);
+router.get('/search', authorize('donee'), searchFavouriteFRACon.searchFavouriteFRA);
+router.post('/:fraID', authorize('donee'), saveFRACon.saveFRA);
+router.delete('/:fraID', authorize('donee'), removeFRACon.removeFRA);
 
 module.exports = router;
