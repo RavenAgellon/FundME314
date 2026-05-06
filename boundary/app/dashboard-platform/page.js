@@ -22,10 +22,12 @@ export default function PlatformDashboard() {
     <>
       <Navbar role="Platform Mgmt" username={user.name} />
       <div className="page">
-        <h2>Platform Management</h2>
-        <p className="subtitle">
-          Manage FRA categories, reports and platform-wide settings.
-        </p>
+        <div style={{ textAlign: 'center', margin: '3rem 0 2.5rem' }}>
+          <h2>Platform Management</h2>
+          <p className="subtitle">
+            Manage FRA categories, reports and platform-wide settings.
+          </p>
+        </div>
 
         <div className="menu-grid">
           <div

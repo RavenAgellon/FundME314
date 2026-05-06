@@ -8,7 +8,6 @@ async function createFRACategory(req, res) {
 
     await FRACategory.create({
       catName,
-      fraIDs,
       description
     });
 
@@ -41,7 +40,6 @@ async function updateFRACategory(req, res) {
       { catName: oldCatName },
       {
         catName,
-        fraIDs,
         description
       }
     );
