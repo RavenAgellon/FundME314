@@ -281,7 +281,7 @@ export default function FundraiserCompletedFRAPage() {
                 <div
                   key={row.label}
                   style={{
-                    display: row.long ? 'block' : 'flex',
+                    display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: row.long ? 'flex-start' : 'center',
                     borderBottom: '1px solid rgba(255,255,255,0.05)',
@@ -297,7 +297,8 @@ export default function FundraiserCompletedFRAPage() {
                       letterSpacing: '0.6px',
                       fontWeight: 500,
                       display: 'block',
-                      marginBottom: row.long ? '0.35rem' : 0,
+                      marginBottom: 0,
+                      flexShrink: 0,
                     }}
                   >
                     {row.label}
