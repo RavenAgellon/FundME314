@@ -121,7 +121,7 @@ body.modal-open {
   padding: 2rem;
   width: 100%;
   max-width: 540px;
-  margin: auto 0;
+  margin: 0 auto;
   animation: fadeUp 0.25s ease both;
 }
 .modal h3 { font-family: 'Playfair Display', serif; font-size: 1.3rem; margin-bottom: 1.25rem; }

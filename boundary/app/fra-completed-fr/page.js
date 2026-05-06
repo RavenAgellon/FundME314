@@ -298,7 +298,8 @@ export default function FundraiserCompletedFRAPage() {
                       fontWeight: 500,
                       display: 'block',
                       marginBottom: 0,
-                      flexShrink: 0,
+                      flex: '0 0 38%',
+                      minWidth: '140px',
                     }}
                   >
                     {row.label}
@@ -308,8 +309,8 @@ export default function FundraiserCompletedFRAPage() {
                     style={{
                       fontSize: '0.875rem',
                       color: 'var(--text)',
-                      textAlign: row.long ? 'left' : 'right',
-                      maxWidth: row.long ? '100%' : '60%',
+                      textAlign: 'right',
+                      maxWidth: '60%',
                       lineHeight: 1.5,
                       overflowWrap: 'anywhere',
                       wordBreak: 'break-word',

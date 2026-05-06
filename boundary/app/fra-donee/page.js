@@ -374,7 +374,7 @@ export default function DoneeFRAPage() {
                 <div
                   key={row.label}
                   style={{
-                    display: row.long ? 'block' : 'flex',
+                    display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: row.long ? 'flex-start' : 'center',
                     borderBottom: '1px solid rgba(255,255,255,0.05)',
@@ -390,7 +390,9 @@ export default function DoneeFRAPage() {
                       letterSpacing: '0.6px',
                       fontWeight: 500,
                       display: 'block',
-                      marginBottom: row.long ? '0.35rem' : 0,
+                      flex: '0 0 38%',
+                      minWidth: '140px',
+                      marginBottom: 0,
                     }}
                   >
                     {row.label}
@@ -400,8 +402,8 @@ export default function DoneeFRAPage() {
                     style={{
                       fontSize: '0.875rem',
                       color: 'var(--text)',
-                      textAlign: row.long ? 'left' : 'right',
-                      maxWidth: row.long ? '100%' : '60%',
+                      textAlign: 'right',
+                      maxWidth: '60%',
                       lineHeight: 1.5,
                       overflowWrap: 'anywhere',
                       wordBreak: 'break-word',
