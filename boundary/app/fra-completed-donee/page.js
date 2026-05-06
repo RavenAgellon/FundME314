@@ -49,7 +49,7 @@ export default function DoneeCompletedFRAPage() {
   async function viewFRAs() {
     setLoading(true);
     try {
-      const res = await apiFetch('/api/fra/completed', 'GET');
+      const res = await apiFetch('/api/fra/search/completed', 'GET');
       const data = await res.json();
 
       const sorted = sortByFRAID(data || []);
@@ -100,7 +100,7 @@ export default function DoneeCompletedFRAPage() {
     setLoading(true);
     try {
       const res = await apiFetch(
-        '/api/fra/search?fraName=' + encodeURIComponent(search),
+        '/api/fra/search/name?fraName=' + encodeURIComponent(search),
         'GET',
       );
       const data = await res.json();

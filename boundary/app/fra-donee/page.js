@@ -51,7 +51,7 @@ export default function DoneeFRAPage() {
     try {
       const res = await apiFetch('/api/fra', 'GET');
       const data = await res.json();
-      
+
       // Get ongoing FRAs only
       const ongoingFRAs = sortByFRAID(
         (data.fraList || []).filter(
@@ -102,7 +102,7 @@ export default function DoneeFRAPage() {
     setLoading(true);
     try {
       const res = await apiFetch(
-        '/api/fra/search?fraName=' + encodeURIComponent(search),
+        '/api/fra/search/name?fraName=' + encodeURIComponent(search),
         'GET',
       );
       const data = await res.json();
@@ -114,8 +114,9 @@ export default function DoneeFRAPage() {
       );
 
       setFRAs(ongoingFRAs);
-    } catch {
+    } catch (err) {
       setFRAs([]);
+      console.log(err);
     } finally {
       setLoading(false);
     }
@@ -278,7 +279,10 @@ export default function DoneeFRAPage() {
                       <span
                         onClick={async () => {
                           try {
-                            await apiFetch(`/api/fra/${FRA.fraID}/view`, 'PATCH');
+                            await apiFetch(
+                              `/api/fra/${FRA.fraID}/view`,
+                              'PATCH',
+                            );
                           } catch (err) {
                             console.error('Failed to update view count:', err);
                           }
@@ -302,9 +306,7 @@ export default function DoneeFRAPage() {
                     </td>
 
                     <td>
-                      <span>
-                        $ {(FRA.targetAmount || 0).toLocaleString()}
-                      </span>
+                      <span>$ {(FRA.targetAmount || 0).toLocaleString()}</span>
                     </td>
 
                     <td>{`${getDaysLeft(FRA.endDate)} days left`}</td>
