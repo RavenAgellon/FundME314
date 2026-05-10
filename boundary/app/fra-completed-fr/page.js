@@ -26,13 +26,14 @@ export default function FundraiserCompletedFRAPage() {
 
   const [errorMsg, setErrorMsg] = useState('');
 
-  useEffect(() => {
+  function displayPage() {
     const u = requireAuth('fundraiser');
+    if (u) setUser(u);
+  }
 
-    if (u) {
-      setUser(u);
-      loadFRAs();
-    }
+  useEffect(() => {
+    displayPage();
+    loadFRAs();
   }, []);
 
   useEffect(() => {
@@ -48,9 +49,7 @@ export default function FundraiserCompletedFRAPage() {
   function getCompletedFRAs(fraList) {
     const today = new Date();
 
-    return fraList.filter(
-      (fra) => new Date(fra.endDate || fra.end) < today,
-    );
+    return fraList.filter((fra) => new Date(fra.endDate || fra.end) < today);
   }
 
   async function loadFRAs() {
@@ -200,7 +199,8 @@ export default function FundraiserCompletedFRAPage() {
                       <td>{fra.fraName || fra.title}</td>
 
                       <td>
-                        $ {(fra.targetAmount || fra.target || 0).toLocaleString()}
+                        ${' '}
+                        {(fra.targetAmount || fra.target || 0).toLocaleString()}
                       </td>
 
                       <td>{formatDate(fra.endDate || fra.end)}</td>

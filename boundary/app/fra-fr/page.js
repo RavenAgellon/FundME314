@@ -81,14 +81,15 @@ export default function FundraiserOngoingFRAPage() {
 
   const [creating, setCreating] = useState(false);
 
-  useEffect(() => {
+  function displayPage() {
     const u = requireAuth('fundraiser');
+    if (u) setUser(u);
+  }
 
-    if (u) {
-      setUser(u);
-      loadFRAs();
-      loadCategories();
-    }
+  useEffect(() => {
+    displayPage();
+    loadFRAs();
+    loadCategories();
   }, []);
 
   useEffect(() => {
@@ -104,9 +105,7 @@ export default function FundraiserOngoingFRAPage() {
   function getOngoingFRAs(fraList) {
     const today = new Date();
 
-    return fraList.filter(
-      (fra) => new Date(fra.endDate || fra.end) >= today,
-    );
+    return fraList.filter((fra) => new Date(fra.endDate || fra.end) >= today);
   }
 
   async function fetchSavedCounts() {
@@ -218,9 +217,7 @@ export default function FundraiserOngoingFRAPage() {
     setCategory(fra.category || '');
     setCategoryDesc(getCategoryDescription(fra.category));
 
-    setTarget(
-      fra.targetAmount?.toString() || fra.target?.toString() || '',
-    );
+    setTarget(fra.targetAmount?.toString() || fra.target?.toString() || '');
     setStart(formatDate(fra.startDate || fra.start));
     setEnd(formatDate(fra.endDate || fra.end));
 
@@ -406,7 +403,8 @@ export default function FundraiserOngoingFRAPage() {
                       <td>{fra.fraName || fra.title}</td>
 
                       <td>
-                        $ {(fra.targetAmount || fra.target || 0).toLocaleString()}
+                        ${' '}
+                        {(fra.targetAmount || fra.target || 0).toLocaleString()}
                       </td>
 
                       <td>{formatDate(fra.endDate || fra.end)}</td>
