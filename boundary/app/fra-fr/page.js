@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import { requireAuth, apiFetch } from '@/lib/auth';
@@ -60,6 +60,7 @@ export default function FundraiserOngoingFRAPage() {
   const [search, setSearch] = useState('');
 
   const [savedCounts, setSavedCounts] = useState({});
+  const [viewCounts, setViewCounts] = useState({});
   const [categories, setCategories] = useState([]);
 
   const [showForm, setShowForm] = useState(false);
@@ -86,22 +87,6 @@ export default function FundraiserOngoingFRAPage() {
     if (u) setUser(u);
   }
 
-  useEffect(() => {
-    displayPage();
-    loadFRAs();
-    loadCategories();
-  }, []);
-
-  useEffect(() => {
-    if (showForm || showDetails) {
-      document.body.classList.add('modal-open');
-    } else {
-      document.body.classList.remove('modal-open');
-    }
-
-    return () => document.body.classList.remove('modal-open');
-  }, [showForm, showDetails]);
-
   function getOngoingFRAs(fraList) {
     const today = new Date();
 
@@ -124,7 +109,27 @@ export default function FundraiserOngoingFRAPage() {
     }
   }
 
-  async function loadCategories() {
+  async function fetchViewCounts(fraList) {
+    const viewMap = {};
+    const promises = fraList.map(async (fra) => {
+      try {
+        const res = await fetch(`${API_BASE}/${fra.fraID}/views`);
+        const data = await res.json();
+        console.log(`View count for FRA ${fra.fraID}:`, data);
+        viewMap[fra.fraID] = data;
+      } catch (error) {
+        console.error(
+          `Failed to fetch view count for FRA ${fra.fraID}:`,
+          error,
+        );
+        viewMap[fra.fraID] = 0;
+      }
+    });
+    await Promise.all(promises);
+    setViewCounts(viewMap);
+  }
+
+  const loadCategories = useCallback(async () => {
     try {
       const res = await fetch(`${CAT_API_BASE}/search`);
       const data = await res.json();
@@ -134,9 +139,9 @@ export default function FundraiserOngoingFRAPage() {
     } catch {
       setCategories([]);
     }
-  }
+  }, []);
 
-  async function loadFRAs() {
+  const loadFRAs = useCallback(async () => {
     setLoading(true);
 
     try {
@@ -147,11 +152,64 @@ export default function FundraiserOngoingFRAPage() {
       setFRAs(getOngoingFRAs(allFRAs));
 
       await fetchSavedCounts();
+      await fetchViewCounts(allFRAs);
     } catch {
       setFRAs([]);
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    displayPage();
+    loadFRAs();
+    loadCategories();
+  }, [loadFRAs, loadCategories]);
+
+  useEffect(() => {
+    if (showForm || showDetails) {
+      document.body.classList.add('modal-open');
+    } else {
+      document.body.classList.remove('modal-open');
+    }
+
+    return () => document.body.classList.remove('modal-open');
+  }, [showForm, showDetails]);
+
+  async function fetchSavedCounts() {
+    try {
+      const res = await apiFetch('/api/favourite-fra/counts', 'GET');
+      const data = await res.json();
+
+      const countMap = {};
+      data.forEach((item) => {
+        countMap[item.fraID] = item.savedCount;
+      });
+
+      setSavedCounts(countMap);
+    } catch {
+      setSavedCounts({});
+    }
+  }
+
+  async function fetchViewCounts(fraList) {
+    const viewMap = {};
+    const promises = fraList.map(async (fra) => {
+      try {
+        const res = await fetch(`${API_BASE}/${fra.fraID}/views`);
+        const data = await res.json();
+        console.log(`View count for FRA ${fra.fraID}:`, data);
+        viewMap[fra.fraID] = data;
+      } catch (error) {
+        console.error(
+          `Failed to fetch view count for FRA ${fra.fraID}:`,
+          error,
+        );
+        viewMap[fra.fraID] = 0;
+      }
+    });
+    await Promise.all(promises);
+    setViewCounts(viewMap);
   }
 
   async function searchFRA() {
@@ -173,6 +231,7 @@ export default function FundraiserOngoingFRAPage() {
 
       setFRAs(getOngoingFRAs(searchedFRAs));
       await fetchSavedCounts();
+      await fetchViewCounts(searchedFRAs);
     } catch {
       setFRAs([]);
       setErrorMsg('Failed to search FRA');
@@ -430,7 +489,7 @@ export default function FundraiserOngoingFRAPage() {
                       </td>
 
                       <td>{savedCounts[fraID] || 0}</td>
-                      <td>{fra.viewCount || 0}</td>
+                      <td>{viewCounts[fraID] || 0}</td>
 
                       <td onClick={(e) => e.stopPropagation()}>
                         <button
