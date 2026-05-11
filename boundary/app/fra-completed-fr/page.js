@@ -17,6 +17,21 @@ function getFRAId(fra) {
   return fra.fraID || fra.id || fra._id;
 }
 
+function getCompletedFRAs(fraList) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  return fraList.filter((fra) => {
+    const endDateValue = fra.endDate || fra.end;
+    if (!endDateValue) return false;
+
+    const endDate = new Date(endDateValue);
+    endDate.setHours(0, 0, 0, 0);
+
+    return endDate < today;
+  });
+}
+
 function sortCompletedByDate(fraList) {
   return [...fraList].sort(
     (a, b) => new Date(b.endDate || b.end) - new Date(a.endDate || a.end),
@@ -102,14 +117,15 @@ export default function FundraiserCompletedFRAPage() {
     setErrorMsg('');
 
     try {
-      const res = await fetch(`${API_BASE}/fundraiser/completed/view`);
+      const res = await fetch(`${API_BASE}/fundraiser/view`);
       const data = await res.json();
 
       if (!res.ok) {
         throw new Error(data.message || 'Failed to load completed FRAs');
       }
 
-      const completedFRAs = sortCompletedByDate(Array.isArray(data) ? data : []);
+      const allFRAs = data.fraList || [];
+      const completedFRAs = sortCompletedByDate(getCompletedFRAs(allFRAs));
 
       setFRAs(completedFRAs);
 
@@ -150,9 +166,7 @@ export default function FundraiserCompletedFRAPage() {
 
     try {
       const res = await fetch(
-        `${API_BASE}/fundraiser/completed/search?fraName=${encodeURIComponent(
-          search,
-        )}`,
+        `${API_BASE}/fundraiser/search?fraName=${encodeURIComponent(search)}`,
       );
 
       const data = await res.json();
@@ -161,12 +175,13 @@ export default function FundraiserCompletedFRAPage() {
         throw new Error(data.message || 'Failed to search completed FRA');
       }
 
-      const searchedFRAs = sortCompletedByDate(Array.isArray(data) ? data : []);
+      const searchedFRAs = Array.isArray(data) ? data : data.fraList || [];
+      const completedFRAs = sortCompletedByDate(getCompletedFRAs(searchedFRAs));
 
-      setFRAs(searchedFRAs);
+      setFRAs(completedFRAs);
 
       await fetchSavedCounts();
-      await fetchViewCounts(searchedFRAs);
+      await fetchViewCounts(completedFRAs);
     } catch (error) {
       setFRAs([]);
       setErrorMsg(error.message || 'Failed to search completed FRA');
@@ -206,6 +221,7 @@ export default function FundraiserCompletedFRAPage() {
         </span>
 
         <h2>Completed Fundraising Activities</h2>
+
         <p className="subtitle">
           View and search completed fundraising activities.
         </p>
@@ -226,6 +242,7 @@ export default function FundraiserCompletedFRAPage() {
         >
           <div className="search-wrap" style={{ display: 'flex' }}>
             <span className="search-icon">🔍</span>
+
             <input
               type="text"
               value={search}
@@ -233,6 +250,7 @@ export default function FundraiserCompletedFRAPage() {
               onKeyDown={(e) => e.key === 'Enter' && searchFRA()}
               placeholder="Search by FRA name"
             />
+
             <button className="btn-primary" onClick={searchFRA}>
               Search
             </button>
