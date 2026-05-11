@@ -33,28 +33,10 @@ export function getUser() {
 // LOGOUT — clears login info and sends user back to login page
 // -------------------------------------------------------
 export function logout() {
-  // Step 1: Get the saved user info
-  const user = getUser();
-
-  // Step 2: Tell the server the user is logging out
-  if (user) {
-    fetch(API_URL + '/api/auth/logout', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-user-id':   user.userID,
-        'x-user-role': user.role
-      }
-    }).catch(function() {
-      // If this fails it does not matter
-      // We still log out on the browser side
-    });
-  }
-
-  // Step 3: Delete the user info from the browser storage
+  // Step 1: Delete the user info from the browser storage
   localStorage.removeItem('user');
 
-  // Step 4: Send the user back to the login page
+  // Step 2: Send the user back to the login page
   window.location.href = '/';
 }
 
@@ -96,9 +78,9 @@ export async function apiFetch(path, method, body) {
     headers: {
       'Content-Type': 'application/json',
       // Send user info in headers so the server knows who is making the request
-      'x-user-id':   user ? user.userID : '',
-      'x-user-role': user ? user.role   : ''
-    }
+      'x-user-id': user ? user.userID : '',
+      'x-user-role': user ? user.role : '',
+    },
   };
 
   // Step 3: If a body was provided (for POST and PUT), add it to the request
