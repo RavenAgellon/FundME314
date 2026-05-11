@@ -2,11 +2,11 @@ const express = require('express');
 const router = express.Router();
 const { protect, authorize } = require('../middleware/auth');
 const {
-  viewUserAccountCon,
-  searchUserAccountCon,
-  createUserAccountCon,
-  updateUserAccountCon,
-  suspendUserAccountCon,
+  viewUserAccountCon,//
+  searchUserAccountCon,//
+  createUserAccountCon,//
+  updateUserAccountCon,//
+  suspendUserAccountCon,//
 } = require('../controllers/usersController');
 
 router.get('/', viewUserAccountCon.viewUserAccount);

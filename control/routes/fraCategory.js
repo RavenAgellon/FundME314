@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const {
-  createFRACategoryCon,
-  updateFRACategoryCon,
-  viewFRACategoryCon,
-  suspendFRACategoryCon,
-  searchFRACategoryCon
+  createFRACategoryCon,//
+  updateFRACategoryCon,//
+  viewFRACategoryCon,//
+  suspendFRACategoryCon,//
+  searchFRACategoryCon//
 } = require('../controllers/fraCategoryController');
 
 router.post('/', createFRACategoryCon.createFRACategory);

@@ -2,11 +2,11 @@ const express = require('express');
 const router = express.Router();
 const { protect, authorize } = require('../middleware/auth');
 const {
-  viewUserProfileCon,
-  searchUserProfileCon,
-  createUserProfileCon,
-  updateUserProfileCon,
-  suspendUserProfileCon,
+  viewUserProfileCon,//
+  searchUserProfileCon,//
+  createUserProfileCon,//
+  updateUserProfileCon,//
+  suspendUserProfileCon,//
 } = require('../controllers/userProfilesController');
 
 router.get('/', viewUserProfileCon.viewUserProfile);

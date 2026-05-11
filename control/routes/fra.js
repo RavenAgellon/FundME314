@@ -2,27 +2,37 @@ const express = require('express');
 const router = express.Router();
 
 const {
-  createFRACon,
-  suspendFRACon,
-  viewFRACon,
-  incrementViewCon,
-  checkViewCon,
-  updateFRACon,
-  searchFRACon,
-  searchCompletedFRACon,
-  dailyReportCon,
-  weeklyReportCon,
-  monthlyReportCon
+  createFRACon,//
+  suspendFRACon,//
+  FRViewFRACon,//
+  DoneeViewFRACon,//
+  incrementViewCon,//not a user story, but needed for view count
+  checkViewCon,//
+  updateFRACon,//
+  FRSearchFRACon,//
+  DoneeSearchFRACon,//
+  FRSearchCompletedFRACon,//
+  DoneeSearchCompletedFRACon,//
+  FRViewCompletedFRACon,//
+  DoneeViewCompletedFRACon,//
+  dailyReportCon,//
+  weeklyReportCon,//
+  monthlyReportCon//
 } = require('../controllers/fraController');
 
 router.post('/', createFRACon.createFRA);
 router.patch('/:fraID/suspend', suspendFRACon.suspendFRA);
-router.get('/', viewFRACon.viewFRA);
+router.get('/fundraiser/view', FRViewFRACon.viewFRA);
+router.get('/donee/view', DoneeViewFRACon.viewFRA);
 router.patch('/:fraID/view', incrementViewCon.incrementView);
 router.get('/:fraID/views', checkViewCon.checkView);
 router.put('/:fraID', updateFRACon.updateFRA);
-router.get('/search/name', searchFRACon.searchFRA);
-router.get('/search/completed', searchCompletedFRACon.searchCompletedFRA);
+router.get('/fundraiser/search', FRSearchFRACon.searchFRA);
+router.get('/donee/search', DoneeSearchFRACon.searchFRA);
+router.get('/fundraiser/completed', FRSearchCompletedFRACon.searchCompletedFRA);
+router.get('/donee/completed', DoneeSearchCompletedFRACon.searchCompletedFRA);
+router.get('/donee/completed/view', DoneeViewCompletedFRACon.ViewCompletedFRA);
+router.get('/fundraiser/completed/view', FRViewCompletedFRACon.ViewCompletedFRA);
 router.get('/report/daily', dailyReportCon.dailyReport);
 router.get('/report/weekly', weeklyReportCon.weeklyReport);
 router.get('/report/monthly', monthlyReportCon.monthlyReport);

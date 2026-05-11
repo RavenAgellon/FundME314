@@ -77,22 +77,32 @@ class suspendFRACon {
   }
 }
 
-class viewFRACon {
-  static async viewFRA(req, res) {
-    try {
-      const fraList = await FRA.find().sort({ fraID: 1 });
+async function runViewFRA(req, res) {
+  try {
+    const fraList = await FRA.find().sort({ fraID: 1 });
 
-      return res.json({
-        success: true,
-        fraList
-      });
-    } catch (err) {
-      return res.status(500).json({
-        success: false,
-        message: 'Server error',
-        error: err.message
-      });
-    }
+    return res.json({
+      success: true,
+      fraList
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: err.message
+    });
+  }
+}
+
+class FRViewFRACon {
+  static async viewFRA(req, res) {
+    return ViewFRA(req, res);
+  }
+}
+
+class DoneeViewFRACon {
+  static async viewFRA(req, res) {
+    return ViewFRA(req, res);
   }
 }
 
@@ -199,54 +209,106 @@ class updateFRACon {
   }
 }
 
-class searchFRACon {
+async function SearchFRA(req, res) {
+  try {
+    const { fraName } = req.query;
+
+    if (!fraName || !fraName.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'fraName is required'
+      });
+    }
+
+    const fraList = await FRA.find({
+      fraName: { $regex: fraName.trim(), $options: 'i' }
+    }).sort({ createdAt: -1 });
+
+    return res.json(fraList);
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: err.message
+    });
+  }
+}
+
+class FRSearchFRACon {
   static async searchFRA(req, res) {
-    try {
-      const { fraName } = req.query;
-
-      if (!fraName || !fraName.trim()) {
-        return res.status(400).json({
-          success: false,
-          message: 'fraName is required'
-        });
-      }
-
-      const fraList = await FRA.find({
-        fraName: { $regex: fraName.trim(), $options: 'i' }
-      }).sort({ createdAt: -1 });
-
-      return res.json(fraList);
-    } catch (err) {
-      return res.status(500).json({
-        success: false,
-        message: 'Server error',
-        error: err.message
-      });
-    }
+    return SearchFRA(req, res);
   }
 }
 
-class searchCompletedFRACon {
+class DoneeSearchFRACon {
+  static async searchFRA(req, res) {
+    return SearchFRA(req, res);
+  }
+}
+
+async function SearchCompletedFRA(req, res) {
+  try {
+    const searchText = req.query.fraName || '';
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const fraList = await FRA.find({
+      endDate: { $lt: today },
+      fraName: { $regex: searchText, $options: 'i' }
+    }).sort({ endDate: -1 });
+
+    return res.json(fraList);
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: err.message
+    });
+  }
+}
+
+async function ViewCompletedFRA(req, res) {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const fraList = await FRA.find({
+      endDate: { $lt: today }
+    }).sort({ endDate: -1 });
+
+    return res.json(fraList);
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: err.message
+    });
+  }
+}
+
+class FRSearchCompletedFRACon {
   static async searchCompletedFRA(req, res) {
-    try {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      const fraList = await FRA.find({
-        endDate: { $lt: today }
-      }).sort({ endDate: -1 });
-
-      return res.json(fraList);
-    } catch (err) {
-      return res.status(500).json({
-        success: false,
-        message: 'Server error',
-        error: err.message
-      });
-    }
+    return SearchCompletedFRA(req, res);
   }
 }
 
+class DoneeSearchCompletedFRACon {
+  static async searchCompletedFRA(req, res) {
+    return SearchCompletedFRA(req, res);
+  }
+}
+class FRViewCompletedFRACon {
+  static async ViewCompletedFRA(req, res) {
+    return ViewCompletedFRA(req, res);
+  }
+}
+
+class DoneeViewCompletedFRACon {
+  static async ViewCompletedFRA(req, res) {
+    return ViewCompletedFRA(req, res);
+  }
+}
 class dailyReportCon {
   static async dailyReport(req, res) {
     try {
@@ -330,12 +392,17 @@ class checkViewCon {
 module.exports = {
   createFRACon,
   suspendFRACon,
-  viewFRACon,
+  FRViewFRACon,
+  DoneeViewFRACon,
   incrementViewCon,
   checkViewCon,
   updateFRACon,
-  searchFRACon,
-  searchCompletedFRACon,
+  FRSearchFRACon,
+  DoneeSearchFRACon,
+  FRSearchCompletedFRACon,
+  DoneeSearchCompletedFRACon,
+  FRViewCompletedFRACon,
+  DoneeViewCompletedFRACon,
   dailyReportCon,
   weeklyReportCon,
   monthlyReportCon
