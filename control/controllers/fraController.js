@@ -3,12 +3,19 @@ const FRA = require('../../entity/FRA');
 class createFRACon {
   static async createFRA(req, res) {
     try {
-      const { fraName, startDate, endDate, targetAmount, category, description } = req.body;
+      const {
+        fraName,
+        startDate,
+        endDate,
+        targetAmount,
+        category,
+        description,
+      } = req.body;
 
       if (!fraName || !startDate || !endDate || targetAmount === undefined) {
         return res.status(400).json({
           success: false,
-          message: 'fraName, startDate, endDate, and targetAmount are required'
+          message: 'fraName, startDate, endDate, and targetAmount are required',
         });
       }
 
@@ -16,7 +23,7 @@ class createFRACon {
       if (existingFRA) {
         return res.status(409).json({
           success: false,
-          message: 'FRA already exists with the same name'
+          message: 'FRA already exists with the same name',
         });
       }
 
@@ -26,7 +33,7 @@ class createFRACon {
         description,
         startDate,
         endDate,
-        targetAmount
+        targetAmount,
       });
 
       await fra.save();
@@ -34,13 +41,13 @@ class createFRACon {
       return res.status(201).json({
         success: true,
         message: 'FRA created successfully',
-        fra
+        fra,
       });
     } catch (err) {
       return res.status(500).json({
         success: false,
         message: 'Server error',
-        error: err.message
+        error: err.message,
       });
     }
   }
@@ -65,13 +72,12 @@ class suspendFRACon {
 
       return res.json({
         message: 'FRA ' + statusMessage,
-        suspended: fra.suspended
+        suspended: fra.suspended,
       });
-
     } catch (err) {
       return res.status(500).json({
         message: 'Server error',
-        error: err.message
+        error: err.message,
       });
     }
   }
@@ -83,26 +89,26 @@ async function runViewFRA(req, res) {
 
     return res.json({
       success: true,
-      fraList
+      fraList,
     });
   } catch (err) {
     return res.status(500).json({
       success: false,
       message: 'Server error',
-      error: err.message
+      error: err.message,
     });
   }
 }
 
 class FRViewFRACon {
   static async viewFRA(req, res) {
-    return ViewFRA(req, res);
+    return runViewFRA(req, res);
   }
 }
 
 class DoneeViewFRACon {
   static async viewFRA(req, res) {
-    return ViewFRA(req, res);
+    return runViewFRA(req, res);
   }
 }
 
@@ -114,32 +120,32 @@ class incrementViewCon {
       if (Number.isNaN(fraID)) {
         return res.status(400).json({
           success: false,
-          message: 'Invalid FRA ID'
+          message: 'Invalid FRA ID',
         });
       }
 
       const fra = await FRA.findOneAndUpdate(
         { fraID },
         { $inc: { viewCount: 1 } },
-        { new: true }
+        { new: true },
       );
 
       if (!fra) {
         return res.status(404).json({
           success: false,
-          message: 'FRA not found'
+          message: 'FRA not found',
         });
       }
 
       return res.json({
         success: true,
-        fra
+        fra,
       });
     } catch (err) {
       return res.status(500).json({
         success: false,
         message: 'Server error',
-        error: err.message
+        error: err.message,
       });
     }
   }
@@ -153,17 +159,25 @@ class updateFRACon {
       if (Number.isNaN(fraID)) {
         return res.status(400).json({
           success: false,
-          message: 'Invalid FRA ID'
+          message: 'Invalid FRA ID',
         });
       }
 
-      const { fraName, startDate, endDate, targetAmount, suspended, category, description } = req.body;
+      const {
+        fraName,
+        startDate,
+        endDate,
+        targetAmount,
+        suspended,
+        category,
+        description,
+      } = req.body;
 
       const fra = await FRA.findOne({ fraID });
       if (!fra) {
         return res.status(404).json({
           success: false,
-          message: 'FRA not found'
+          message: 'FRA not found',
         });
       }
 
@@ -172,13 +186,13 @@ class updateFRACon {
 
         const existingFRA = await FRA.findOne({
           fraName: trimmedName,
-          fraID: { $ne: fraID }
+          fraID: { $ne: fraID },
         });
 
         if (existingFRA) {
           return res.status(409).json({
             success: false,
-            message: 'Another FRA already exists with the same name'
+            message: 'Another FRA already exists with the same name',
           });
         }
 
@@ -197,13 +211,13 @@ class updateFRACon {
       return res.json({
         success: true,
         message: 'FRA updated successfully',
-        fra
+        fra,
       });
     } catch (err) {
       return res.status(500).json({
         success: false,
         message: 'Server error',
-        error: err.message
+        error: err.message,
       });
     }
   }
@@ -216,12 +230,12 @@ async function SearchFRA(req, res) {
     if (!fraName || !fraName.trim()) {
       return res.status(400).json({
         success: false,
-        message: 'fraName is required'
+        message: 'fraName is required',
       });
     }
 
     const fraList = await FRA.find({
-      fraName: { $regex: fraName.trim(), $options: 'i' }
+      fraName: { $regex: fraName.trim(), $options: 'i' },
     }).sort({ createdAt: -1 });
 
     return res.json(fraList);
@@ -229,7 +243,7 @@ async function SearchFRA(req, res) {
     return res.status(500).json({
       success: false,
       message: 'Server error',
-      error: err.message
+      error: err.message,
     });
   }
 }
@@ -255,7 +269,7 @@ async function SearchCompletedFRA(req, res) {
 
     const fraList = await FRA.find({
       endDate: { $lt: today },
-      fraName: { $regex: searchText, $options: 'i' }
+      fraName: { $regex: searchText, $options: 'i' },
     }).sort({ endDate: -1 });
 
     return res.json(fraList);
@@ -263,7 +277,7 @@ async function SearchCompletedFRA(req, res) {
     return res.status(500).json({
       success: false,
       message: 'Server error',
-      error: err.message
+      error: err.message,
     });
   }
 }
@@ -274,7 +288,7 @@ async function ViewCompletedFRA(req, res) {
     today.setHours(0, 0, 0, 0);
 
     const fraList = await FRA.find({
-      endDate: { $lt: today }
+      endDate: { $lt: today },
     }).sort({ endDate: -1 });
 
     return res.json(fraList);
@@ -282,7 +296,7 @@ async function ViewCompletedFRA(req, res) {
     return res.status(500).json({
       success: false,
       message: 'Server error',
-      error: err.message
+      error: err.message,
     });
   }
 }
@@ -320,7 +334,7 @@ class dailyReportCon {
       const end = new Date(year, month - 1, date + 1, 0, 0, 0, 0);
 
       const total = await FRA.countDocuments({
-        createdAt: { $gte: start, $lt: end }
+        createdAt: { $gte: start, $lt: end },
       });
 
       return res.json(total);
@@ -341,7 +355,7 @@ class weeklyReportCon {
       const end = new Date(year, month - 1, date + 7, 0, 0, 0, 0);
 
       const total = await FRA.countDocuments({
-        createdAt: { $gte: start, $lt: end }
+        createdAt: { $gte: start, $lt: end },
       });
 
       return res.json(total);
@@ -361,7 +375,7 @@ class monthlyReportCon {
       const end = new Date(year, month, 1, 0, 0, 0, 0);
 
       const total = await FRA.countDocuments({
-        createdAt: { $gte: start, $lt: end }
+        createdAt: { $gte: start, $lt: end },
       });
 
       return res.json(total);
@@ -405,5 +419,5 @@ module.exports = {
   DoneeViewCompletedFRACon,
   dailyReportCon,
   weeklyReportCon,
-  monthlyReportCon
+  monthlyReportCon,
 };
