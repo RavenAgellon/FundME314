@@ -49,7 +49,7 @@ export default function DoneeFRAPage() {
   async function viewFRAs() {
     setLoading(true);
     try {
-      const res = await apiFetch('/api/fra', 'GET');
+      const res = await apiFetch('/api/fra/donee/view', 'GET');
       const data = await res.json();
 
       // Get ongoing FRAs only
@@ -102,9 +102,10 @@ export default function DoneeFRAPage() {
     setLoading(true);
     try {
       const res = await apiFetch(
-        '/api/fra/search/name?fraName=' + encodeURIComponent(search),
+        '/api/fra/donee/search?fraName=' + encodeURIComponent(search),
         'GET',
       );
+
       const data = await res.json();
 
       const ongoingFRAs = sortByFRAID(
@@ -114,9 +115,8 @@ export default function DoneeFRAPage() {
       );
 
       setFRAs(ongoingFRAs);
-    } catch (err) {
+    } catch {
       setFRAs([]);
-      console.log(err);
     } finally {
       setLoading(false);
     }

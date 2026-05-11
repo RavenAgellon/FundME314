@@ -49,7 +49,7 @@ export default function DoneeCompletedFRAPage() {
   async function viewFRAs() {
     setLoading(true);
     try {
-      const res = await apiFetch('/api/fra/search/completed', 'GET');
+      const res = await apiFetch('/api/fra/donee/completed/view', 'GET');
       const data = await res.json();
 
       const sorted = sortByFRAID(data || []);
@@ -100,15 +100,12 @@ export default function DoneeCompletedFRAPage() {
     setLoading(true);
     try {
       const res = await apiFetch(
-        '/api/fra/search/name?fraName=' + encodeURIComponent(search),
+        '/api/fra/donee/completed?fraName=' + encodeURIComponent(search),
         'GET',
       );
       const data = await res.json();
 
-      // Get completed FRAs only from the search result
-      const completedFRAs = sortByFRAID(
-        (data || []).filter((fra) => new Date(fra.endDate) < new Date()),
-      );
+      const completedFRAs = sortByFRAID(data);
 
       setFRAs(completedFRAs);
       await fetchSavedFRAs(completedFRAs);
