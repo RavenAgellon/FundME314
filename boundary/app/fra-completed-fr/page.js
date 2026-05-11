@@ -1,25 +1,39 @@
 'use client';
-import { useEffect, useState } from 'react';
+
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
-import { requireAuth } from '@/lib/auth';
+import { requireAuth, apiFetch } from '@/lib/auth';
 
-// ========== API ENDPOINT ==========
 const API_BASE = 'http://localhost:3000/api/fra';
+const CAT_API_BASE = 'http://localhost:3000/api/fra-category';
 
 function formatDate(dateStr) {
   if (!dateStr) return '';
-  if (dateStr.length >= 10) return dateStr.slice(0, 10);
-  return dateStr;
+  return String(dateStr).slice(0, 10);
+}
+
+function getFRAId(fra) {
+  return fra.fraID || fra.id || fra._id;
+}
+
+function sortCompletedByDate(fraList) {
+  return [...fraList].sort(
+    (a, b) => new Date(b.endDate || b.end) - new Date(a.endDate || a.end),
+  );
 }
 
 export default function FundraiserCompletedFRAPage() {
   const router = useRouter();
-  const [user, setUser] = useState(null);
 
+  const [user, setUser] = useState(null);
   const [FRAs, setFRAs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
+
+  const [savedCounts, setSavedCounts] = useState({});
+  const [viewCounts, setViewCounts] = useState({});
+  const [categories, setCategories] = useState([]);
 
   const [selectedFRA, setSelectedFRA] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
@@ -31,10 +45,89 @@ export default function FundraiserCompletedFRAPage() {
     if (u) setUser(u);
   }
 
+  async function fetchSavedCounts() {
+    try {
+      const res = await apiFetch('/api/favourite-fra/counts', 'GET');
+      const data = await res.json();
+
+      const countMap = {};
+
+      if (Array.isArray(data)) {
+        data.forEach((item) => {
+          countMap[item.fraID] = item.savedCount || 0;
+        });
+      }
+
+      setSavedCounts(countMap);
+    } catch {
+      setSavedCounts({});
+    }
+  }
+
+  async function fetchViewCounts(fraList) {
+    const viewMap = {};
+
+    await Promise.all(
+      fraList.map(async (fra) => {
+        const fraID = getFRAId(fra);
+
+        try {
+          const res = await fetch(`${API_BASE}/${fraID}/views`);
+          const data = await res.json();
+
+          viewMap[fraID] = Number(data) || 0;
+        } catch {
+          viewMap[fraID] = fra.viewCount || 0;
+        }
+      }),
+    );
+
+    setViewCounts(viewMap);
+  }
+
+  const loadCategories = useCallback(async () => {
+    try {
+      const res = await fetch(`${CAT_API_BASE}/search`);
+      const data = await res.json();
+
+      const categoryList = Array.isArray(data) ? data : [];
+      setCategories(categoryList);
+    } catch {
+      setCategories([]);
+    }
+  }, []);
+
+  const loadFRAs = useCallback(async () => {
+    setLoading(true);
+    setErrorMsg('');
+
+    try {
+      const res = await fetch(`${API_BASE}/fundraiser/completed/view`);
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || 'Failed to load completed FRAs');
+      }
+
+      const completedFRAs = sortCompletedByDate(Array.isArray(data) ? data : []);
+
+      setFRAs(completedFRAs);
+
+      await fetchSavedCounts();
+      await fetchViewCounts(completedFRAs);
+    } catch (error) {
+      setFRAs([]);
+      setErrorMsg(error.message || 'Failed to load completed FRAs');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     displayPage();
     loadFRAs();
-  }, []);
+    loadCategories();
+  }, [loadFRAs, loadCategories]);
 
   useEffect(() => {
     if (showDetails) {
@@ -45,28 +138,6 @@ export default function FundraiserCompletedFRAPage() {
 
     return () => document.body.classList.remove('modal-open');
   }, [showDetails]);
-
-  function getCompletedFRAs(fraList) {
-    const today = new Date();
-
-    return fraList.filter((fra) => new Date(fra.endDate || fra.end) < today);
-  }
-
-  async function loadFRAs() {
-    setLoading(true);
-
-    try {
-      const res = await fetch(`${API_BASE}`);
-      const data = await res.json();
-
-      const allFRAs = data.fraList || data || [];
-      setFRAs(getCompletedFRAs(allFRAs));
-    } catch {
-      setFRAs([]);
-    } finally {
-      setLoading(false);
-    }
-  }
 
   async function searchFRA() {
     if (!search.trim()) {
@@ -79,19 +150,34 @@ export default function FundraiserCompletedFRAPage() {
 
     try {
       const res = await fetch(
-        `${API_BASE}/search?fraName=${encodeURIComponent(search)}`,
+        `${API_BASE}/fundraiser/completed/search?fraName=${encodeURIComponent(
+          search,
+        )}`,
       );
 
       const data = await res.json();
-      const searchedFRAs = data.fraList || data || [];
 
-      setFRAs(getCompletedFRAs(searchedFRAs));
-    } catch {
+      if (!res.ok) {
+        throw new Error(data.message || 'Failed to search completed FRA');
+      }
+
+      const searchedFRAs = sortCompletedByDate(Array.isArray(data) ? data : []);
+
+      setFRAs(searchedFRAs);
+
+      await fetchSavedCounts();
+      await fetchViewCounts(searchedFRAs);
+    } catch (error) {
       setFRAs([]);
-      setErrorMsg('Failed to search FRA');
+      setErrorMsg(error.message || 'Failed to search completed FRA');
     } finally {
       setLoading(false);
     }
+  }
+
+  function getCategoryDescription(catName) {
+    const selectedCategory = categories.find((cat) => cat.catName === catName);
+    return selectedCategory?.description || '—';
   }
 
   function openDetails(fra) {
@@ -130,7 +216,14 @@ export default function FundraiserCompletedFRAPage() {
           </div>
         )}
 
-        <div className="toolbar" style={{ marginBottom: '2rem' }}>
+        <div
+          className="toolbar"
+          style={{
+            marginBottom: '2rem',
+            gap: '0.75rem',
+            flexWrap: 'wrap',
+          }}
+        >
           <div className="search-wrap" style={{ display: 'flex' }}>
             <span className="search-icon">🔍</span>
             <input
@@ -140,11 +233,7 @@ export default function FundraiserCompletedFRAPage() {
               onKeyDown={(e) => e.key === 'Enter' && searchFRA()}
               placeholder="Search by FRA name"
             />
-            <button
-              className="btn-primary"
-              onClick={searchFRA}
-              style={{ marginLeft: '1rem' }}
-            >
+            <button className="btn-primary" onClick={searchFRA}>
               Search
             </button>
           </div>
@@ -157,27 +246,30 @@ export default function FundraiserCompletedFRAPage() {
                 <th>FRA ID</th>
                 <th>Name</th>
                 <th>Target Amount</th>
-                <th>Completed Date</th>
+                <th>End Date</th>
                 <th>Status</th>
+                <th>Saved</th>
+                <th>Views</th>
+                <th>Actions</th>
               </tr>
             </thead>
 
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="loading-cell">
+                  <td colSpan={8} className="loading-cell">
                     Loading...
                   </td>
                 </tr>
               ) : FRAs.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="empty-state">
+                  <td colSpan={8} className="empty-state">
                     No completed fundraising activities.
                   </td>
                 </tr>
               ) : (
                 FRAs.map((fra) => {
-                  const fraID = fra.fraID || fra.id;
+                  const fraID = getFRAId(fra);
 
                   return (
                     <tr
@@ -208,16 +300,25 @@ export default function FundraiserCompletedFRAPage() {
                       <td>
                         <span
                           style={{
-                            background: 'rgba(120,120,120,0.15)',
-                            color: '#bdbdbd',
-                            padding: '4px 12px',
-                            borderRadius: '999px',
-                            fontSize: '0.75rem',
-                            fontWeight: 600,
+                            color: 'var(--muted)',
+                            fontSize: '0.8rem',
+                            textTransform: 'uppercase',
                           }}
                         >
                           Completed
                         </span>
+                      </td>
+
+                      <td>{savedCounts[fraID] || 0}</td>
+                      <td>{viewCounts[fraID] || 0}</td>
+
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <button
+                          className="action-btn btn-edit"
+                          onClick={() => openDetails(fra)}
+                        >
+                          View
+                        </button>
                       </td>
                     </tr>
                   );
@@ -234,7 +335,7 @@ export default function FundraiserCompletedFRAPage() {
           onClick={(e) => e.target === e.currentTarget && closeDetails()}
         >
           <div className="modal">
-            <h3>FRA Details</h3>
+            <h3>Completed FRA Details</h3>
 
             <div
               style={{
@@ -244,7 +345,7 @@ export default function FundraiserCompletedFRAPage() {
               }}
             >
               {[
-                { label: 'FRA ID', value: selectedFRA.fraID || selectedFRA.id },
+                { label: 'FRA ID', value: getFRAId(selectedFRA) },
                 {
                   label: 'Name',
                   value: selectedFRA.fraName || selectedFRA.title || '—',
@@ -255,17 +356,19 @@ export default function FundraiserCompletedFRAPage() {
                 },
                 {
                   label: 'Category Description',
-                  value: selectedFRA.categoryDescription || '—',
-                  long: true,
+                  value: getCategoryDescription(selectedFRA.category),
                 },
                 {
                   label: 'FRA Description',
                   value: selectedFRA.description || '—',
-                  long: true,
                 },
                 {
                   label: 'Target Amount',
-                  value: `$ ${(selectedFRA.targetAmount || selectedFRA.target || 0).toLocaleString()}`,
+                  value: `$ ${(
+                    selectedFRA.targetAmount ||
+                    selectedFRA.target ||
+                    0
+                  ).toLocaleString()}`,
                 },
                 {
                   label: 'Start Date',
@@ -275,15 +378,25 @@ export default function FundraiserCompletedFRAPage() {
                   label: 'End Date',
                   value: formatDate(selectedFRA.endDate || selectedFRA.end),
                 },
-                { label: 'Status', value: 'Completed' },
-                { label: 'View Count', value: selectedFRA.viewCount || 0 },
+                {
+                  label: 'Status',
+                  value: 'Completed',
+                },
+                {
+                  label: 'Saved Count',
+                  value: savedCounts[getFRAId(selectedFRA)] || 0,
+                },
+                {
+                  label: 'View Count',
+                  value: viewCounts[getFRAId(selectedFRA)] || 0,
+                },
               ].map((row) => (
                 <div
                   key={row.label}
                   style={{
                     display: 'flex',
                     justifyContent: 'space-between',
-                    alignItems: row.long ? 'flex-start' : 'center',
+                    alignItems: 'flex-start',
                     borderBottom: '1px solid rgba(255,255,255,0.05)',
                     paddingBottom: '0.6rem',
                     gap: '1rem',
@@ -297,9 +410,8 @@ export default function FundraiserCompletedFRAPage() {
                       letterSpacing: '0.6px',
                       fontWeight: 500,
                       display: 'block',
-                      marginBottom: 0,
-                      flex: '0 0 38%',
                       minWidth: '140px',
+                      flexShrink: 0,
                     }}
                   >
                     {row.label}
@@ -325,7 +437,7 @@ export default function FundraiserCompletedFRAPage() {
 
             <div
               className="modal-actions"
-              style={{ justifyContent: 'flex-end' }}
+              style={{ justifyContent: 'space-between' }}
             >
               <button className="btn-cancel" onClick={closeDetails}>
                 Close
