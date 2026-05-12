@@ -34,16 +34,16 @@ export default function UserAccountManagement() {
 async function viewUserAccount() {
   setLoading(true);
   try {
-    const res = await apiFetch('/api/users/view', 'GET');
+    const res = await apiFetch('/api/users', 'GET');
     const data = await res.json();
-    setUsers(Array.isArray(data) ? data : []); // ← guard here
+    setUsers(Array.isArray(data) ? data : []);
   } catch { setUsers([]); }
   finally { setLoading(false); }
 }
 
   async function fetchProfiles() {
     try {
-      const res = await apiFetch('/api/user-profiles/view', 'GET');
+      const res = await apiFetch('/api/user-profiles', 'GET');
       const data = await res.json();
       setProfiles(data);
     } catch { setProfiles([]); }
@@ -112,7 +112,7 @@ async function searchUserAccount() {
   async function suspendUserAccount(userID, isSuspended) {
     if (!confirm(`Are you sure you want to ${isSuspended ? 'unsuspend' : 'suspend'} this user?`)) return;
     try {
-      await apiFetch('/api/users/' + userID + '/suspend', 'PUT');
+      await apiFetch('/api/users/' + userID + '/suspend', 'PATCH');
       viewUserAccount();
     } catch { alert('Failed to update suspension status.'); }
   }

@@ -32,7 +32,7 @@ export default function UserProfileManagement() {
   async function viewUserProfile() {
     setLoading(true);
     try {
-      const res = await apiFetch('/api/user-profiles/view', 'GET');
+      const res = await apiFetch('/api/user-profiles', 'GET');
       const data = await res.json();
       setProfiles(data);
     } catch { setProfiles([]); }
@@ -102,7 +102,7 @@ export default function UserProfileManagement() {
   async function suspendUserProfile(roleID, isSuspended) {
     if (!confirm(`Are you sure you want to ${isSuspended ? 'unsuspend' : 'suspend'} this profile? This will also ${isSuspended ? 'unsuspend' : 'suspend'} all users with this role.`)) return;
     try {
-      const res = await apiFetch('/api/user-profiles/' + roleID + '/suspend', 'PUT');
+      const res = await apiFetch('/api/user-profiles/' + roleID + '/suspend', 'PATCH');
       const data = await res.json();
       alert(data.message);
       viewUserProfile();
