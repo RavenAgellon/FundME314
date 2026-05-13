@@ -86,10 +86,10 @@ export default function LoginPage() {
 
           <div className="test-creds">
             {[
-              { role: 'User Admin', u: 'admin1', p: 'admin123' },
-              { role: 'Fundraiser', u: 'fr1', p: 'fr123' },
-              { role: 'Donee', u: 'donee1', p: 'donee123' },
-              { role: 'Platform Mgmt', u: 'pm1', p: 'pm123' },
+              { role: 'User Admin', u: 'user1', p: 'user1' },
+              { role: 'Fundraiser', u: 'fr1', p: 'fr1' },
+              { role: 'Donee', u: 'donee1', p: 'donee1' },
+              { role: 'Platform Mgmt', u: 'pm1', p: 'pm1' },
             ].map(c => (
               <button key={c.u} className="cred-pill" onClick={() => fillCreds(c.u, c.p)}>
                 <div className="cred-role">{c.role}</div>
