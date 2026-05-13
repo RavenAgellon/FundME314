@@ -83,7 +83,39 @@ class suspendFRACon {
   }
 }
 
-async function runViewFRA(req, res) {
+// View one FRA by fraID
+async function ViewFRA(req, res) {
+  try {
+    const fraID = Number(req.params.fraID);
+
+    if (Number.isNaN(fraID)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid FRA ID',
+      });
+    }
+
+    const fra = await FRA.findOne({ fraID });
+
+    if (!fra) {
+      return res.status(404).json({
+        success: false,
+        message: 'FRA not found',
+      });
+    }
+
+    return res.json(fra);
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: err.message,
+    });
+  }
+}
+
+// View all FRAs
+async function ViewAllFRA(req, res) {
   try {
     const fraList = await FRA.find().sort({ fraID: 1 });
 
@@ -100,15 +132,21 @@ async function runViewFRA(req, res) {
   }
 }
 
+class ViewAllFRACon {
+  static async viewAllFRA(req, res) {
+    return ViewAllFRA(req, res);
+  }
+}
+
 class FRViewFRACon {
   static async viewFRA(req, res) {
-    return runViewFRA(req, res);
+    return ViewFRA(req, res);
   }
 }
 
 class DoneeViewFRACon {
   static async viewFRA(req, res) {
-    return runViewFRA(req, res);
+    return ViewFRA(req, res);
   }
 }
 
@@ -284,17 +322,32 @@ async function SearchCompletedFRA(req, res) {
 
 async function ViewCompletedFRA(req, res) {
   try {
+    const fraID = Number(req.params.fraID);
+
+    if (Number.isNaN(fraID)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid FRA ID',
+      });
+    }
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const fraList = await FRA.find({
+    const fra = await FRA.findOne({
+      fraID,
       endDate: { $lt: today },
       suspended: false,
-    }).sort({ endDate: -1 });
+    });
 
-    console.log('Completed FRAs found:', fraList.length);
+    if (!fra) {
+      return res.status(404).json({
+        success: false,
+        message: 'Completed FRA not found',
+      });
+    }
 
-    return res.json(fraList);
+    return res.json(fra);
   } catch (err) {
     return res.status(500).json({
       success: false,
@@ -303,6 +356,24 @@ async function ViewCompletedFRA(req, res) {
     });
   }
 }
+
+// View all completed FRAs
+async function ViewAllCompletedFRA(req, res) {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const fraList = await FRA.find({
+      endDate: { $lt: today },
+      suspended: false,
+    }).sort({ endDate: -1 });
+
+    return res.json(fraList);
+  } catch (err) {
+    return res.status(500).json([]);
+  }
+}
+
 
 class FRSearchCompletedFRACon {
   static async searchCompletedFRA(req, res) {
@@ -315,6 +386,12 @@ class DoneeSearchCompletedFRACon {
     return SearchCompletedFRA(req, res);
   }
 }
+class ViewAllCompletedFRACon {
+  static async viewAllCompletedFRA(req, res) {
+    return ViewAllCompletedFRA(req, res);
+  }
+}
+
 class FRViewCompletedFRACon {
   static async ViewCompletedFRA(req, res) {
     return ViewCompletedFRA(req, res);
@@ -411,6 +488,7 @@ module.exports = {
   suspendFRACon,
   FRViewFRACon,
   DoneeViewFRACon,
+  ViewAllFRACon,//Not part of userstory, used for dashboard
   incrementViewCon,
   checkViewCon,
   updateFRACon,
@@ -423,4 +501,5 @@ module.exports = {
   dailyReportCon,
   weeklyReportCon,
   monthlyReportCon,
+  ViewAllCompletedFRACon,//NOt part of userstory, used for dashboard
 };

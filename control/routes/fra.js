@@ -7,6 +7,8 @@ const {
   FRViewFRACon,//
   DoneeViewFRACon,//
   incrementViewCon,//not a user story, but needed for view count
+  ViewAllCompletedFRACon,//Not part of userstory, used for dashboard
+  ViewAllFRACon,//Not part of userstory, used for dashboard
   checkViewCon,//
   updateFRACon,//
   FRSearchFRACon,//
@@ -36,5 +38,7 @@ router.get('/fundraiser/completed/view', FRViewCompletedFRACon.ViewCompletedFRA)
 router.get('/report/daily', dailyReportCon.dailyReport);
 router.get('/report/weekly', weeklyReportCon.weeklyReport);
 router.get('/report/monthly', monthlyReportCon.monthlyReport);
+router.get('/fundraiser/all', ViewAllFRACon.viewAllFRA);
+router.get('/donee/all', ViewAllFRACon.viewAllFRA);
 
 module.exports = router;
