@@ -13,7 +13,7 @@ export default function DoneeCompletedFRAPage() {
   const [FRAs, setFRAs] = useState([]);
   const [search, setSearch] = useState('');
   const [savedFRAs, setSavedFRAs] = useState([]);
-  const [detailFRA, setDetailFRA] = useState(null);
+  const [selectedFRA, setSelectedFRA] = useState(null);
   const [isSelectedFRASaved, setIsSelectedFRASaved] = useState(false);
   const [categories, setCategories] = useState([]);
 
@@ -56,9 +56,11 @@ export default function DoneeCompletedFRAPage() {
 
       setFRAs(sorted);
       await fetchSavedFRAs(sorted);
-    } catch {
+    } catch (err) {
       setFRAs([]);
       setSavedFRAs([]);
+      console.log('❗완료 fra 페칭');
+      console.log(err);
     } finally {
       setLoading(false);
     }
@@ -87,6 +89,27 @@ export default function DoneeCompletedFRAPage() {
       setSavedFRAs(saved);
     } catch {
       setSavedFRAs([]);
+    }
+  }
+
+  async function fetchSelectedFRA(fraID) {
+    try {
+      const res = await apiFetch(
+        `/api/fra/donee/completed/${fraID}/view`,
+        'GET',
+      );
+      const data = await res.json();
+
+      setSelectedFRA(data);
+    } catch {
+      setSelectedFRA(null);
+    }
+
+    // increment the number of views for the FRA
+    try {
+      await apiFetch(`/api/fra/${fraID}/view`, 'PATCH');
+    } catch (err) {
+      console.error('Failed to update view count:', err);
     }
   }
 
@@ -126,7 +149,7 @@ export default function DoneeCompletedFRAPage() {
       return;
 
     const selectedFRAIndex = FRAs.findIndex(
-      (FRA) => FRA.fraID === detailFRA.fraID,
+      (FRA) => FRA.fraID === selectedFRA.fraID,
     );
 
     // Delete FRA from favourite list
@@ -267,7 +290,8 @@ export default function DoneeCompletedFRAPage() {
                     <td>
                       <span
                         onClick={() => {
-                          setDetailFRA(FRA);
+                          // setSelectedFRA(FRA);
+                          fetchSelectedFRA(FRA.fraID);
                           setIsSelectedFRASaved(savedFRAs[index]);
                         }}
                         style={{
@@ -302,10 +326,10 @@ export default function DoneeCompletedFRAPage() {
       </div>
 
       {/* Detail Modal */}
-      {detailFRA && (
+      {selectedFRA && (
         <div
           className="modal-overlay active"
-          onClick={(e) => e.target === e.currentTarget && setDetailFRA(null)}
+          onClick={(e) => e.target === e.currentTarget && setSelectedFRA(null)}
         >
           <div className="modal">
             <h3>FRA Details</h3>
@@ -318,30 +342,30 @@ export default function DoneeCompletedFRAPage() {
               }}
             >
               {[
-                { label: 'FRA ID', value: detailFRA.fraID || '—' },
-                { label: 'Name', value: detailFRA.fraName || '—' },
-                { label: 'Category', value: detailFRA.category || '—' },
+                { label: 'FRA ID', value: selectedFRA.fraID || '—' },
+                { label: 'Name', value: selectedFRA.fraName || '—' },
+                { label: 'Category', value: selectedFRA.category || '—' },
                 {
                   label: 'Category Description',
-                  value: getCategoryDescription(detailFRA.category),
+                  value: getCategoryDescription(selectedFRA.category),
                   long: true,
                 },
                 {
                   label: 'FRA Description',
-                  value: detailFRA.description || '—',
+                  value: selectedFRA.description || '—',
                   long: true,
                 },
                 {
                   label: 'Target Amount',
-                  value: `$ ${(detailFRA.targetAmount || 0).toLocaleString()}`,
+                  value: `$ ${(selectedFRA.targetAmount || 0).toLocaleString()}`,
                 },
                 {
                   label: 'Start Date',
-                  value: new Date(detailFRA.startDate).toLocaleDateString(),
+                  value: new Date(selectedFRA.startDate).toLocaleDateString(),
                 },
                 {
                   label: 'End Date',
-                  value: new Date(detailFRA.endDate).toLocaleDateString(),
+                  value: new Date(selectedFRA.endDate).toLocaleDateString(),
                 },
               ].map((row) => (
                 <div
@@ -397,13 +421,16 @@ export default function DoneeCompletedFRAPage() {
                 className={`action-btn ${
                   isSelectedFRASaved ? 'btn-suspend' : 'btn-unsuspend'
                 }`}
-                onClick={() => saveFRA(detailFRA.fraID)}
+                onClick={() => saveFRA(selectedFRA.fraID)}
               >
                 {isSelectedFRASaved
                   ? 'Remove from Favourite List'
                   : 'Save to Favourite List'}
               </button>
-              <button className="btn-cancel" onClick={() => setDetailFRA(null)}>
+              <button
+                className="btn-cancel"
+                onClick={() => setSelectedFRA(null)}
+              >
                 Close
               </button>
             </div>

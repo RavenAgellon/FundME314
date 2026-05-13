@@ -13,7 +13,7 @@ export default function DoneeFRAPage() {
   const [FRAs, setFRAs] = useState([]);
   const [search, setSearch] = useState('');
   const [savedFRAs, setSavedFRAs] = useState([]);
-  const [detailFRA, setDetailFRA] = useState(null);
+  const [selectedFRA, setSelectedFRA] = useState(null);
   const [isSelectedFRASaved, setIsSelectedFRASaved] = useState(false);
   const [categories, setCategories] = useState([]);
 
@@ -49,7 +49,7 @@ export default function DoneeFRAPage() {
   async function viewFRAs() {
     setLoading(true);
     try {
-      const res = await apiFetch('/api/fra/donee/view', 'GET');
+      const res = await apiFetch('/api/fra/view', 'GET');
       const data = await res.json();
 
       // Get ongoing FRAs only
@@ -93,6 +93,24 @@ export default function DoneeFRAPage() {
     }
   }
 
+  async function fetchSelectedFRA(fraID) {
+    try {
+      const res = await apiFetch(`/api/fra/donee/${fraID}/view`, 'GET');
+      const data = await res.json();
+
+      setSelectedFRA(data);
+    } catch {
+      setSelectedFRA(null);
+    }
+
+    // increment the number of views for the FRA
+    try {
+      await apiFetch(`/api/fra/${fraID}/view`, 'PATCH');
+    } catch (err) {
+      console.error('Failed to update view count:', err);
+    }
+  }
+
   async function searchFRA() {
     if (!search.trim()) {
       viewFRAs();
@@ -131,7 +149,7 @@ export default function DoneeFRAPage() {
       return;
 
     const selectedFRAIndex = FRAs.findIndex(
-      (FRA) => FRA.fraID === detailFRA.fraID,
+      (FRA) => FRA.fraID === selectedFRA.fraID,
     );
 
     if (isSelectedFRASaved) {
@@ -277,21 +295,8 @@ export default function DoneeFRAPage() {
 
                     <td>
                       <span
-                        onClick={async () => {
-                          try {
-                            await apiFetch(
-                              `/api/fra/${FRA.fraID}/view`,
-                              'PATCH',
-                            );
-                          } catch (err) {
-                            console.error('Failed to update view count:', err);
-                          }
-
-                          setDetailFRA({
-                            ...FRA,
-                            viewCount: (FRA.viewCount || 0) + 1,
-                          });
-
+                        onClick={() => {
+                          fetchSelectedFRA(FRA.fraID);
                           setIsSelectedFRASaved(savedFRAs[index]);
                         }}
                         style={{
@@ -329,10 +334,10 @@ export default function DoneeFRAPage() {
       </div>
 
       {/* Detail Modal */}
-      {detailFRA && (
+      {selectedFRA && (
         <div
           className="modal-overlay active"
-          onClick={(e) => e.target === e.currentTarget && setDetailFRA(null)}
+          onClick={(e) => e.target === e.currentTarget && setSelectedFRA(null)}
         >
           <div className="modal">
             <h3>FRA Details</h3>
@@ -345,30 +350,30 @@ export default function DoneeFRAPage() {
               }}
             >
               {[
-                { label: 'FRA ID', value: detailFRA.fraID || '—' },
-                { label: 'Name', value: detailFRA.fraName || '—' },
-                { label: 'Category', value: detailFRA.category || '—' },
+                { label: 'FRA ID', value: selectedFRA.fraID || '—' },
+                { label: 'Name', value: selectedFRA.fraName || '—' },
+                { label: 'Category', value: selectedFRA.category || '—' },
                 {
                   label: 'Category Description',
-                  value: getCategoryDescription(detailFRA.category),
+                  value: getCategoryDescription(selectedFRA.category),
                   long: true,
                 },
                 {
                   label: 'FRA Description',
-                  value: detailFRA.description || '—',
+                  value: selectedFRA.description || '—',
                   long: true,
                 },
                 {
                   label: 'Target Amount',
-                  value: `$ ${(detailFRA.targetAmount || 0).toLocaleString()}`,
+                  value: `$ ${(selectedFRA.targetAmount || 0).toLocaleString()}`,
                 },
                 {
                   label: 'Start Date',
-                  value: new Date(detailFRA.startDate).toLocaleDateString(),
+                  value: new Date(selectedFRA.startDate).toLocaleDateString(),
                 },
                 {
                   label: 'End Date',
-                  value: new Date(detailFRA.endDate).toLocaleDateString(),
+                  value: new Date(selectedFRA.endDate).toLocaleDateString(),
                 },
               ].map((row) => (
                 <div
@@ -424,14 +429,17 @@ export default function DoneeFRAPage() {
                 className={`action-btn ${
                   isSelectedFRASaved ? 'btn-suspend' : 'btn-unsuspend'
                 }`}
-                onClick={() => saveFRA(detailFRA.fraID)}
+                onClick={() => saveFRA(selectedFRA.fraID)}
               >
                 {isSelectedFRASaved
                   ? 'Remove from Favourite List'
                   : 'Save to Favourite List'}
               </button>
 
-              <button className="btn-cancel" onClick={() => setDetailFRA(null)}>
+              <button
+                className="btn-cancel"
+                onClick={() => setSelectedFRA(null)}
+              >
                 Close
               </button>
             </div>

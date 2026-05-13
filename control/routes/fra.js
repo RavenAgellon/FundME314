@@ -2,27 +2,30 @@ const express = require('express');
 const router = express.Router();
 
 const {
-  createFRACon,//
-  suspendFRACon,//
-  FRViewFRACon,//
-  DoneeViewFRACon,//
-  incrementViewCon,//not a user story, but needed for view count
-  ViewAllCompletedFRACon,//Not part of userstory, used for dashboard
-  ViewAllFRACon,//Not part of userstory, used for dashboard
-  checkViewCon,//
-  updateFRACon,//
-  FRSearchFRACon,//
-  DoneeSearchFRACon,//
-  FRSearchCompletedFRACon,//
-  DoneeSearchCompletedFRACon,//
-  FRViewCompletedFRACon,//
-  DoneeViewCompletedFRACon,//
-  dailyReportCon,//
-  weeklyReportCon,//
-  monthlyReportCon//
+  createFRACon, //
+  suspendFRACon, //
+  FRViewFRACon, //
+  DoneeViewFRACon, //
+  incrementViewCon, //not a user story, but needed for view count
+  ViewAllCompletedFRACon, //Not part of userstory, used for dashboard
+  ViewAllFRACon, //Not part of userstory, used for dashboard
+  checkViewCon, //
+  updateFRACon, //
+  FRSearchFRACon, //
+  DoneeSearchFRACon, //
+  FRSearchCompletedFRACon, //
+  DoneeSearchCompletedFRACon, //
+  FRViewCompletedFRACon, //
+  DoneeViewCompletedFRACon, //
+  dailyReportCon, //
+  weeklyReportCon, //
+  monthlyReportCon, //
 } = require('../controllers/fraController');
 
 router.post('/', createFRACon.createFRA);
+router.get('/fundraiser/all', ViewAllFRACon.viewAllFRA);
+router.get('/view', ViewAllFRACon.viewAllFRA);
+router.get('/donee/completed/view', ViewAllCompletedFRACon.viewAllCompletedFRA);
 router.patch('/:fraID/suspend', suspendFRACon.suspendFRA);
 router.get('/:fraID/view', FRViewFRACon.viewFRA);
 router.get('/donee/:fraID/view', DoneeViewFRACon.viewFRA);
@@ -34,12 +37,12 @@ router.get('/donee/search', DoneeSearchFRACon.searchFRA);
 router.get('/fundraiser/completed', FRSearchCompletedFRACon.searchCompletedFRA);
 router.get('/donee/completed', DoneeSearchCompletedFRACon.searchCompletedFRA);
 router.get('/fr/completed/:fraID/view', FRViewCompletedFRACon.ViewCompletedFRA);
-router.get('/donee/completed/:fraID/view', DoneeViewCompletedFRACon.ViewCompletedFRA);
+router.get(
+  '/donee/completed/:fraID/view',
+  DoneeViewCompletedFRACon.ViewCompletedFRA,
+);
 router.get('/report/daily', dailyReportCon.dailyReport);
 router.get('/report/weekly', weeklyReportCon.weeklyReport);
 router.get('/report/monthly', monthlyReportCon.monthlyReport);
-router.get('/fundraiser/all', ViewAllFRACon.viewAllFRA);
-router.get('/view', ViewAllFRACon.viewAllFRA);
-router.get('/donee/completed/view', ViewAllCompletedFRACon.viewAllCompletedFRA);;
 
 module.exports = router;
