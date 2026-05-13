@@ -174,15 +174,12 @@ export default function PlatformFRACategories() {
     }
   }
 
-  // View FRAs in a category
-  async function viewCategoryFRAs(cat) {
-    try {
-      const res = await apiFetch(`/api/fra-category/${encodeURIComponent(cat.catName)}`, 'GET');
-      const data = await res.json();
-      setViewFraList({ catName: cat.catName, fraList: Array.isArray(data) ? data : [] });
-    } catch {
-      setViewFraList({ catName: cat.catName, fraList: [] });
-    }
+  // View category description in a modal
+  function viewCategoryDescription(cat) {
+    setViewFraList({
+      catName: cat.catName,
+      description: cat.description || 'No description available.'
+    });
   }
 
   if (!user) return null;
@@ -209,7 +206,6 @@ export default function PlatformFRACategories() {
             <thead>
               <tr>
                 <th>Category</th>
-                <th>Description</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
@@ -217,17 +213,16 @@ export default function PlatformFRACategories() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={4} className="loading-cell">Loading...</td>
+                  <td colSpan={3} className="loading-cell">Loading...</td>
                 </tr>
               ) : categories.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="empty-state">No categories found.</td>
+                  <td colSpan={3} className="empty-state">No categories found.</td>
                 </tr>
               ) : (
                 categories.map((cat) => (
-                  <tr key={cat.catName} onClick={() => viewCategoryFRAs(cat)} style={{ cursor: 'pointer' }}>
+                  <tr key={cat.catName} onClick={() => viewCategoryDescription(cat)} style={{ cursor: 'pointer' }}>
                     <td style={{ fontWeight: 600 }}>{cat.catName}</td>
-                    <td>{cat.description || '—'}</td>
                     <td>
                       <span style={cat.suspended ? { color: 'var(--error)', fontSize: '0.8rem', textTransform: 'uppercase' } : { color: 'var(--success)', fontSize: '0.8rem', textTransform: 'uppercase' }}>
                         {cat.suspended ? 'Suspended' : 'Active'}
@@ -279,36 +274,19 @@ export default function PlatformFRACategories() {
           </div>
         )}
 
-        {/* View FRAs modal */}
+        {/* View Category Description Modal */}
       {viewFraList && (
         <div className="modal-overlay active" onClick={(e) => e.target === e.currentTarget && setViewFraList(null)}>
           <div className="modal">
             <h3>FRAs in Category "{viewFraList.catName}"</h3>
 
-            <div style={{ display: 'grid', gap: '0.75rem', marginBottom: '1.25rem', marginTop: '1rem' }}>
-              {viewFraList.fraList.length === 0 ? (
-                <div style={{ color: 'var(--muted)', fontSize: '0.875rem', padding: '1rem', textAlign: 'center' }}>
-                  No FRAs in this category.
-                </div>
-              ) : (
-                viewFraList.fraList.map((fra) => (
-                  <div
-                    key={fra.fraID}
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      borderBottom: '1px solid rgba(255,255,255,0.05)',
-                      paddingBottom: '0.8rem'
-                    }}
-                  >
-                    <div style={{ fontSize: '0.95rem', color: 'var(--text)', fontWeight: 600 }}>{fra.fraName || '—'}</div>
-                    <div style={fra.suspended ? { color: 'var(--error)', fontSize: '0.8rem', textTransform: 'uppercase', fontWeight: 600 } : { color: 'var(--success)', fontSize: '0.8rem', textTransform: 'uppercase', fontWeight: 600 }}>
-                      {fra.suspended ? 'Suspended' : 'Active'}
-                    </div>
-                  </div>
-                ))
-              )}
+            <div style={{ marginTop: '0.5rem' }}>
+              <div style={{ color: 'var(--muted)', fontSize: '0.9rem', fontWeight: 600 }}>
+                Category Description:
+              </div>
+              <div style={{ color: 'var(--text)', fontSize: '0.95rem', marginTop: '0.5rem' }}>
+                {viewFraList.description}
+              </div>
             </div>
 
             <div className="modal-actions">
