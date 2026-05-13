@@ -289,7 +289,10 @@ async function ViewCompletedFRA(req, res) {
 
     const fraList = await FRA.find({
       endDate: { $lt: today },
+      suspended: false,
     }).sort({ endDate: -1 });
+
+    console.log('Completed FRAs found:', fraList.length);
 
     return res.json(fraList);
   } catch (err) {

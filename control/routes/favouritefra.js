@@ -3,7 +3,7 @@ const router = express.Router();
 const { protect, authorize } = require('../middleware/auth');
 const {
   saveFRACon,//
-  removeFRACon,//not a user story, should be removed.
+  //removeFRACon,//not a user story, should be removed.
   viewFavouriteFRACon,//
   searchFavouriteFRACon,//
   getFavouriteCountsCon,//
@@ -18,6 +18,6 @@ router.get('/counts', authorize('fundraiser', 'donee'), getFavouriteCountsCon.ge
 router.get('/view', authorize('donee'), viewFavouriteFRACon.viewFavouriteFRA);
 router.get('/search', authorize('donee'), searchFavouriteFRACon.searchFavouriteFRA);
 router.post('/:fraID', authorize('donee'), saveFRACon.saveFRA);
-router.delete('/:fraID', authorize('donee'), removeFRACon.removeFRA);
+//router.delete('/:fraID', authorize('donee'), removeFRACon.removeFRA);
 
 module.exports = router;

@@ -37,11 +37,11 @@ class loginCon {
     }
   }
 }
-
-class logoutCon {
+/*
+//class logoutCon {
   static logout(req, res) {
     res.json({ message: 'Logged out successfully' });
   }
 }
-
+*/
 module.exports = { loginCon, logoutCon };

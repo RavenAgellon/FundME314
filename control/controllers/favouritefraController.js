@@ -42,7 +42,7 @@ class saveFRACon {
   }
 }
 
-class removeFRACon {
+/*class removeFRACon {
   static async removeFRA(req, res) {
     try {
       const doneeID = parseInt(req.headers['x-user-id']);
@@ -56,7 +56,7 @@ class removeFRACon {
       res.status(500).json({ message: 'Server error', error: err.message });
     }
   }
-}
+}*/
 
 class viewFavouriteFRACon {
   static async viewFavouriteFRA(req, res) {
@@ -135,7 +135,7 @@ class getFavouriteCountsCon {
 
 module.exports = {
   saveFRACon,
-  removeFRACon,
+  //removeFRACon,
   viewFavouriteFRACon,
   searchFavouriteFRACon,
   getFavouriteCountsCon,
