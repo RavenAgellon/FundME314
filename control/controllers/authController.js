@@ -44,4 +44,4 @@ class loginCon {
   }
 }
 */
-module.exports = { loginCon, logoutCon };
+module.exports = { loginCon };
