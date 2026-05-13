@@ -1,18 +1,22 @@
 const express = require('express');
 const router = express.Router();
 const { protect, authorize } = require('../middleware/auth');
-const {
-  viewUserProfileCon,//
-  searchUserProfileCon,//
-  createUserProfileCon,//
-  updateUserProfileCon,//
-  suspendUserProfileCon,//
-} = require('../controllers/userProfilesController');
+const { viewAllUserProfile,
+        viewUserProfile,
+        searchUserProfile,
+        createUserProfile,
+        updateUserProfile,
+        suspendUserProfile
+      } = require('../controllers/userProfilesController');
 
-router.get('/', viewUserProfileCon.viewUserProfile);
-router.get('/search', searchUserProfileCon.searchUserProfile);
-router.post('/', createUserProfileCon.createUserProfile);
-router.put('/:roleID', updateUserProfileCon.updateUserProfile);
-router.patch('/:roleID/suspend', suspendUserProfileCon.suspendUserProfile);
+router.use(protect);
+router.use(authorize('user_admin'));
+
+router.get('/view',             viewAllUserProfile);          // view all profiles
+router.get('/view/:roleID',     viewUserProfile);             // view single profile details
+router.get('/search',           searchUserProfile);           // search profiles
+router.post('/',                createUserProfile);           // create profile
+router.put('/:roleID',          updateUserProfile);           // update profile
+router.put('/:roleID/suspend',  suspendUserProfile);          // suspend profile
 
 module.exports = router;

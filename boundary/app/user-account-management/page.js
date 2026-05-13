@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import { requireAuth, apiFetch } from '@/lib/auth';
 
-
 const EMPTY_FORM = { username: '', password: '', role: '', name: '', email: '', phoneNumber: '' };
 
 export default function UserAccountManagement() {
@@ -22,99 +21,102 @@ export default function UserAccountManagement() {
 
   function displayUserAdminPage() {
     const u = requireAuth('user_admin');
-    if (u) setUser(u);
+    if (u) { setUser(u); viewAllUserAccount(); fetchProfiles(); }
   }
 
-  useEffect(() => {
-    displayUserAdminPage();
-    viewUserAccount();
-    fetchProfiles();
-  }, []);
+  useEffect(() => { displayUserAdminPage(); }, []);
 
-async function viewUserAccount() {
-  setLoading(true);
-  try {
-    const res = await apiFetch('/api/users', 'GET');
-    const data = await res.json();
-    setUsers(Array.isArray(data) ? data : []);
-  } catch { setUsers([]); }
-  finally { setLoading(false); }
-}
+  async function viewAllUserAccount() {
+    setLoading(true);
+    try {
+      const res = await apiFetch('/api/users/view', 'GET'); // viewAllUserAccount
+      const data = await res.json();
+      setUsers(data);
+    } catch { setUsers([]); }
+    finally { setLoading(false); }
+  }
 
   async function fetchProfiles() {
     try {
-      const res = await apiFetch('/api/user-profiles', 'GET');
+      const res = await apiFetch('/api/user-profiles/view', 'GET');
       const data = await res.json();
       setProfiles(data);
     } catch { setProfiles([]); }
   }
 
-async function searchUserAccount() {
-  if (!search.trim()) {
-    viewUserAccount();
-    return;
+  async function searchUserAccount() {
+    // If search box is empty, just load all users
+    if (!search.trim()) {
+      viewAllUserAccount();
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Call the search endpoint with the search term
+      const res = await apiFetch('/api/users/search?search=' + encodeURIComponent(search), 'GET');
+      const data = await res.json();
+
+      // Show results (may be empty if nothing found)
+      setUsers(data);
+    } catch (err) {
+      setUsers([]);
+    } finally {
+      setLoading(false);
+    }
   }
-  setLoading(true);
-  try {
-    const res = await apiFetch('/api/users/search?search=' + encodeURIComponent(search), 'GET');
-    const data = await res.json();
-    setUsers(Array.isArray(data) ? data : (Array.isArray(data.users) ? data.users : []));
-  } catch {
-    setUsers([]);
-  } finally {
-    setLoading(false);
+
+
+  // viewUserAccount — fetch and show details of a single user
+  async function viewUserAccount(userID) {
+    try {
+      const res = await apiFetch('/api/users/view/' + userID, 'GET');
+      const data = await res.json();
+      setDetailUser(data);
+    } catch (err) {
+      alert('Failed to load user details.');
+    }
   }
-}
-  function openCreateModal() {
+
+  function createUserAccount() {
     setForm(EMPTY_FORM);
     setModalAlert(null);
     setModal({ mode: 'create' });
   }
 
-  function openEditModal(u) {
-    setForm({ username: u.username, password: '', role: u.role, name: u.name || '', email: u.email || '', phoneNumber: u.phoneNumber || '', createdAt: u.createdAt, userID: u.userID });
+  function updateUserAccount(u) {
+    setForm({ username: u.username, password: '', role: u.role, name: u.name || '', email: u.email || '', phoneNumber: u.phoneNumber || '', createdAt: u.createdAt, userID: parseInt(u.userID) });
     setModalAlert(null);
     setModal({ mode: 'edit', data: u });
-  }
-
-  async function createUserAccount() {
-    setModalAlert(null);
-    if (!form.username || !form.role) { setModalAlert({ type: 'error', msg: 'Username and role are required.' }); return; }
-    if (!form.password) { setModalAlert({ type: 'error', msg: 'Password is required for new users.' }); return; }
-    setSaving(true);
-    try {
-      const body = { username: form.username, password: form.password, role: form.role, name: form.name, email: form.email, phoneNumber: form.phoneNumber };
-      const res = await apiFetch('/api/users', 'POST', body);
-      const data = await res.json();
-      if (!res.ok) { setModalAlert({ type: 'error', msg: data.message }); return; }
-      setModal(null);
-      viewUserAccount();
-    } catch { setModalAlert({ type: 'error', msg: 'Server error. Try again.' }); }
-    finally { setSaving(false); }
-  }
-
-  async function updateUserAccount() {
-    setModalAlert(null);
-    if (!form.role) { setModalAlert({ type: 'error', msg: 'Role is required.' }); return; }
-    setSaving(true);
-    try {
-      const body = { role: form.role, name: form.name, email: form.email, phoneNumber: form.phoneNumber };
-      if (form.password) body.password = form.password;
-      const res = await apiFetch('/api/users/' + form.userID, 'PUT', body);
-      const data = await res.json();
-      if (!res.ok) { setModalAlert({ type: 'error', msg: data.message }); return; }
-      setModal(null);
-      viewUserAccount();
-    } catch { setModalAlert({ type: 'error', msg: 'Server error. Try again.' }); }
-    finally { setSaving(false); }
   }
 
   async function suspendUserAccount(userID, isSuspended) {
     if (!confirm(`Are you sure you want to ${isSuspended ? 'unsuspend' : 'suspend'} this user?`)) return;
     try {
-      await apiFetch('/api/users/' + userID + '/suspend', 'PATCH');
-      viewUserAccount();
+      await apiFetch('/api/users/' + userID + '/suspend', 'PUT');
+      viewAllUserAccount();
     } catch { alert('Failed to update suspension status.'); }
+  }
+
+  async function handleModalSubmit() {
+    setModalAlert(null);
+    if (!form.username || !form.role) { setModalAlert({ type: 'error', msg: 'Username and role are required.' }); return; }
+    if (modal.mode === 'create' && !form.password) { setModalAlert({ type: 'error', msg: 'Password is required for new users.' }); return; }
+
+    setSaving(true);
+    try {
+      const body = { username: form.username, role: form.role, name: form.name, email: form.email, phoneNumber: form.phoneNumber };
+      if (form.password) body.password = form.password;
+
+      const url = modal.mode === 'edit' ? '/api/users/' + form.userID : '/api/users';
+      const method = modal.mode === 'edit' ? 'PUT' : 'POST';
+      const res = await apiFetch(url, method, body);
+      const data = await res.json();
+      if (!res.ok) { setModalAlert({ type: 'error', msg: data.message }); return; }
+      setModal(null);
+      viewAllUserAccount();
+    } catch { setModalAlert({ type: 'error', msg: 'Server error. Try again.' }); }
+    finally { setSaving(false); }
   }
 
   function roleBadgeStyle(role) {
@@ -147,7 +149,7 @@ async function searchUserAccount() {
             />
           </div>
           <button className="btn-primary" onClick={searchUserAccount} style={{marginRight:'0.5rem'}}>Search</button>
-          <button className="btn-primary" onClick={openCreateModal}>+ Create User</button>
+          <button className="btn-primary" onClick={createUserAccount}>+ Create User</button>
         </div>
 
         <div className="table-wrap">
@@ -166,7 +168,7 @@ async function searchUserAccount() {
                 <tr key={u._id}>
                   <td><code style={{color:'var(--gold)',fontSize:'0.8rem'}}>{u.userID || '—'}</code></td>
                   <td>
-                    <span onClick={() => setDetailUser(u)}
+                    <span onClick={() => viewUserAccount(u.userID)}
                       style={{cursor:'pointer', color:'var(--text)', borderBottom:'1px dashed var(--muted)', paddingBottom:'1px'}}>
                       {u.name || '—'}
                     </span>
@@ -174,7 +176,7 @@ async function searchUserAccount() {
                   <td><span style={roleBadgeStyle(u.role)}>{u.role}</span></td>
                   <td><span className={`badge ${u.suspended ? 'badge-suspended' : 'badge-active'}`}>{u.suspended ? 'Suspended' : 'Active'}</span></td>
                   <td>
-                    <button className="action-btn btn-edit" onClick={() => openEditModal(u)}>Edit</button>
+                    <button className="action-btn btn-edit" onClick={() => updateUserAccount(u)}>Edit</button>
                     <button className={`action-btn ${u.suspended ? 'btn-unsuspend' : 'btn-suspend'}`}
                       onClick={() => suspendUserAccount(u.userID, u.suspended)}>
                       {u.suspended ? 'Unsuspend' : 'Suspend'}
@@ -273,7 +275,7 @@ async function searchUserAccount() {
 
             <div className="modal-actions">
               <button className="btn-cancel" onClick={() => setModal(null)}>Cancel</button>
-              <button className="btn-primary" onClick={modal.mode === 'create' ? createUserAccount : updateUserAccount} disabled={saving}>
+              <button className="btn-primary" onClick={handleModalSubmit} disabled={saving}>
                 {saving ? 'Saving...' : modal.mode === 'create' ? 'Create User' : 'Save Changes'}
               </button>
             </div>

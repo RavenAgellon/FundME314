@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import { requireAuth, apiFetch } from '@/lib/auth';
 
-
 const EMPTY_FORM = { roleName: '', description: '' };
 
 export default function UserProfileManagement() {
@@ -21,18 +20,15 @@ export default function UserProfileManagement() {
 
   function displayUserAdminPage() {
     const u = requireAuth('user_admin');
-    if (u) setUser(u);
+    if (u) { setUser(u); viewAllUserProfile(); }
   }
 
-  useEffect(() => {
-    displayUserAdminPage();
-    viewUserProfile();
-  }, []);
+  useEffect(() => { displayUserAdminPage(); }, []);
 
-  async function viewUserProfile() {
+  async function viewAllUserProfile() {
     setLoading(true);
     try {
-      const res = await apiFetch('/api/user-profiles', 'GET');
+      const res = await apiFetch('/api/user-profiles/view', 'GET');
       const data = await res.json();
       setProfiles(data);
     } catch { setProfiles([]); }
@@ -40,15 +36,19 @@ export default function UserProfileManagement() {
   }
 
   async function searchUserProfile() {
+    // If search box is empty, just load all profiles
     if (!search.trim()) {
-      viewUserProfile();
+      viewAllUserProfile();
       return;
     }
 
     setLoading(true);
     try {
+      // Call the search endpoint with the search term
       const res = await apiFetch('/api/user-profiles/search?search=' + encodeURIComponent(search), 'GET');
       const data = await res.json();
+
+      // Show results (may be empty if nothing found)
       setProfiles(data);
     } catch (err) {
       setProfiles([]);
@@ -57,56 +57,55 @@ export default function UserProfileManagement() {
     }
   }
 
-  function openCreateModal() {
+
+  // viewUserProfile — fetch and show details of a single profile
+  async function viewUserProfile(roleID) {
+    try {
+      const res = await apiFetch('/api/user-profiles/view/' + roleID, 'GET');
+      const data = await res.json();
+      setDetailProfile(data);
+    } catch (err) {
+      alert('Failed to load profile details.');
+    }
+  }
+
+  function createUserProfile() {
     setForm(EMPTY_FORM);
     setModalAlert(null);
     setModal({ mode: 'create' });
   }
 
-  function openEditModal(p) {
+  function updateUserProfile(p) {
     setForm({ roleName: p.roleName, description: p.description || '', roleID: p.roleID });
     setModalAlert(null);
     setModal({ mode: 'edit', data: p });
   }
 
-  async function createUserProfile() {
-    setModalAlert(null);
-    if (!form.roleName) { setModalAlert({ type: 'error', msg: 'Role name is required.' }); return; }
-    setSaving(true);
-    try {
-      const body = { roleName: form.roleName, description: form.description };
-      const res = await apiFetch('/api/user-profiles', 'POST', body);
-      const data = await res.json();
-      if (!res.ok) { setModalAlert({ type: 'error', msg: data.message }); return; }
-      setModal(null);
-      viewUserProfile();
-    } catch { setModalAlert({ type: 'error', msg: 'Server error. Try again.' }); }
-    finally { setSaving(false); }
-  }
-
-  async function updateUserProfile() {
-    setModalAlert(null);
-    if (!form.roleName) { setModalAlert({ type: 'error', msg: 'Role name is required.' }); return; }
-    setSaving(true);
-    try {
-      const body = { roleName: form.roleName, description: form.description };
-      const res = await apiFetch('/api/user-profiles/' + form.roleID, 'PUT', body);
-      const data = await res.json();
-      if (!res.ok) { setModalAlert({ type: 'error', msg: data.message }); return; }
-      setModal(null);
-      viewUserProfile();
-    } catch { setModalAlert({ type: 'error', msg: 'Server error. Try again.' }); }
-    finally { setSaving(false); }
-  }
-
   async function suspendUserProfile(roleID, isSuspended) {
     if (!confirm(`Are you sure you want to ${isSuspended ? 'unsuspend' : 'suspend'} this profile? This will also ${isSuspended ? 'unsuspend' : 'suspend'} all users with this role.`)) return;
     try {
-      const res = await apiFetch('/api/user-profiles/' + roleID + '/suspend', 'PATCH');
+      const res = await apiFetch('/api/user-profiles/' + roleID + '/suspend', 'PUT');
       const data = await res.json();
       alert(data.message);
-      viewUserProfile();
+      viewAllUserProfile();
     } catch { alert('Failed to update suspension status.'); }
+  }
+
+  async function handleModalSubmit() {
+    setModalAlert(null);
+    if (!form.roleName) { setModalAlert({ type: 'error', msg: 'Role name is required.' }); return; }
+    setSaving(true);
+    try {
+      const body = { roleName: form.roleName, description: form.description };
+      const url = modal.mode === 'edit' ? '/api/user-profiles/' + form.roleID : '/api/user-profiles';
+      const method = modal.mode === 'edit' ? 'PUT' : 'POST';
+      const res = await apiFetch(url, method, body);
+      const data = await res.json();
+      if (!res.ok) { setModalAlert({ type: 'error', msg: data.message }); return; }
+      setModal(null);
+      viewAllUserProfile();
+    } catch { setModalAlert({ type: 'error', msg: 'Server error. Try again.' }); }
+    finally { setSaving(false); }
   }
 
   if (!user) return null;
@@ -131,7 +130,7 @@ export default function UserProfileManagement() {
             />
           </div>
           <button className="btn-primary" onClick={searchUserProfile} style={{marginRight:'0.5rem'}}>Search</button>
-          <button className="btn-primary" onClick={openCreateModal}>+ Create Profile</button>
+          <button className="btn-primary" onClick={createUserProfile}>+ Create Profile</button>
         </div>
 
         <div className="table-wrap">
@@ -150,14 +149,14 @@ export default function UserProfileManagement() {
                 <tr key={p._id}>
                   <td><code style={{color:'var(--gold)',fontSize:'0.8rem'}}>{p.roleID}</code></td>
                   <td>
-                    <span onClick={() => setDetailProfile(p)}
+                    <span onClick={() => viewUserProfile(p.roleID)}
                       style={{cursor:'pointer', color:'var(--text)', borderBottom:'1px dashed var(--muted)', paddingBottom:'1px', fontWeight:500}}>
                       {p.roleName}
                     </span>
                   </td>
                   <td><span className={`badge ${p.suspended ? 'badge-suspended' : 'badge-active'}`}>{p.suspended ? 'Suspended' : 'Active'}</span></td>
                   <td>
-                    <button className="action-btn btn-edit" onClick={() => openEditModal(p)}>Edit</button>
+                    <button className="action-btn btn-edit" onClick={() => updateUserProfile(p)}>Edit</button>
                     <button className={`action-btn ${p.suspended ? 'btn-unsuspend' : 'btn-suspend'}`}
                       onClick={() => suspendUserProfile(p.roleID, p.suspended)}>
                       {p.suspended ? 'Unsuspend' : 'Suspend'}
@@ -216,7 +215,7 @@ export default function UserProfileManagement() {
 
             <div className="modal-actions">
               <button className="btn-cancel" onClick={() => setModal(null)}>Cancel</button>
-              <button className="btn-primary" onClick={modal.mode === 'create' ? createUserProfile : updateUserProfile} disabled={saving}>
+              <button className="btn-primary" onClick={handleModalSubmit} disabled={saving}>
                 {saving ? 'Saving...' : modal.mode === 'create' ? 'Create Profile' : 'Save Changes'}
               </button>
             </div>
