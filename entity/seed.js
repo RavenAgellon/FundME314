@@ -126,16 +126,15 @@ async function seed() {
 
       if (isCompleted) {
         // FRA 1 to FRA 50: completed
+        // Start date and createdAt are in 2025
         // End date is before 2026
-        createdAt = randomDate(
-          new Date(2025, 0, 1, 12, 0, 0),
-          new Date(2025, 5, 30, 12, 0, 0)
-        );
 
         startDate = randomDate(
-          createdAt,
+          new Date(2025, 0, 1, 12, 0, 0),
           new Date(2025, 9, 30, 12, 0, 0)
         );
+
+        createdAt = startDate;
 
         endDate = randomDate(
           startDate,
@@ -143,19 +142,18 @@ async function seed() {
         );
       } else {
         // FRA 51 to FRA 100: ongoing
+        // Start date and createdAt are in 2025
         // End date is after 2026
-        createdAt = randomDate(
+
+        startDate = randomDate(
           new Date(2025, 0, 1, 12, 0, 0),
           new Date(2025, 11, 31, 12, 0, 0)
         );
 
-        startDate = randomDate(
-          createdAt,
-          new Date(2025, 11, 31, 12, 0, 0)
-        );
+        createdAt = startDate;
 
         endDate = randomDate(
-          new Date(2026, 5, 1, 12, 0, 0),
+          new Date(2026, 0, 1, 12, 0, 0),
           new Date(2027, 11, 31, 12, 0, 0)
         );
       }
