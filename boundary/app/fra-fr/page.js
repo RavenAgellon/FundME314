@@ -55,9 +55,9 @@ function getFRAId(fra) {
   return fra.fraID || fra.id || fra._id;
 }
 
-function sortByDeadline(fraList) {
+function sortByFRAID(fraList) {
   return [...fraList].sort(
-    (a, b) => new Date(a.endDate || a.end) - new Date(b.endDate || b.end),
+    (a, b) => Number(getFRAId(a)) - Number(getFRAId(b)),
   );
 }
 
@@ -76,11 +76,25 @@ function getOngoingFRAs(fraList) {
   });
 }
 
+function extractFRAList(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data.fraList)) return data.fraList;
+  if (Array.isArray(data.fras)) return data.fras;
+  if (data.fra) return [data.fra];
+  if (data.FRA) return [data.FRA];
+  if (data.fraData) return [data.fraData];
+  if (data.fraID || data._id || data.id) return [data];
+
+  return [];
+}
+
 export default function FundraiserOngoingFRAPage() {
   const router = useRouter();
   const [user, setUser] = useState(null);
 
   const [FRAs, setFRAs] = useState([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isSearchMode, setIsSearchMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
 
@@ -118,9 +132,12 @@ export default function FundraiserOngoingFRAPage() {
       const data = await res.json();
 
       const countMap = {};
-      data.forEach((item) => {
-        countMap[item.fraID] = item.savedCount;
-      });
+
+      if (Array.isArray(data)) {
+        data.forEach((item) => {
+          countMap[item.fraID] = item.savedCount;
+        });
+      }
 
       setSavedCounts(countMap);
     } catch {
@@ -164,24 +181,32 @@ export default function FundraiserOngoingFRAPage() {
   const loadFRAs = useCallback(async () => {
     setLoading(true);
     setErrorMsg('');
+    setIsSearchMode(false);
 
     try {
-      const res = await fetch(`${API_BASE}/fundraiser/view`);
-      const data = await res.json();
+      let res = await fetch(`${API_BASE}/fundraiser/view`);
+      let data = await res.json();
+
+      if (!res.ok) {
+        res = await fetch(`${API_BASE}/fundraiser/all`);
+        data = await res.json();
+      }
 
       if (!res.ok) {
         throw new Error(data.message || 'Failed to load ongoing FRAs');
       }
 
-      const allFRAs = data.fraList || [];
-      const ongoingFRAs = sortByDeadline(getOngoingFRAs(allFRAs));
+      const fraList = extractFRAList(data);
+      const ongoingFRAs = sortByFRAID(getOngoingFRAs(fraList));
 
       setFRAs(ongoingFRAs);
+      setCurrentIndex(0);
 
       await fetchSavedCounts();
       await fetchViewCounts(ongoingFRAs);
     } catch (error) {
       setFRAs([]);
+      setCurrentIndex(0);
       setErrorMsg(error.message || 'Failed to load ongoing FRAs');
     } finally {
       setLoading(false);
@@ -212,6 +237,7 @@ export default function FundraiserOngoingFRAPage() {
 
     setLoading(true);
     setErrorMsg('');
+    setIsSearchMode(true);
 
     try {
       const res = await fetch(
@@ -224,15 +250,17 @@ export default function FundraiserOngoingFRAPage() {
         throw new Error(data.message || 'Failed to search FRA');
       }
 
-      const searchedFRAs = Array.isArray(data) ? data : data.fraList || [];
-      const ongoingFRAs = sortByDeadline(getOngoingFRAs(searchedFRAs));
+      const searchedFRAs = extractFRAList(data);
+      const ongoingFRAs = sortByFRAID(getOngoingFRAs(searchedFRAs));
 
       setFRAs(ongoingFRAs);
+      setCurrentIndex(0);
 
       await fetchSavedCounts();
       await fetchViewCounts(ongoingFRAs);
     } catch (error) {
       setFRAs([]);
+      setCurrentIndex(0);
       setErrorMsg(error.message || 'Failed to search FRA');
     } finally {
       setLoading(false);
@@ -294,6 +322,14 @@ export default function FundraiserOngoingFRAPage() {
     setShowDetails(false);
   }
 
+  function goPrevious() {
+    setCurrentIndex((prev) => Math.max(prev - 1, 0));
+  }
+
+  function goNext() {
+    setCurrentIndex((prev) => Math.min(prev + 1, FRAs.length - 1));
+  }
+
   async function handleCreate(e) {
     e.preventDefault();
 
@@ -351,6 +387,79 @@ export default function FundraiserOngoingFRAPage() {
     setEditingId(null);
     setErrorMsg('');
   }
+
+  function renderFRARow(fra) {
+    const fraID = getFRAId(fra);
+
+    return (
+      <tr
+        key={fraID}
+        onClick={() => openDetails(fra)}
+        style={{ cursor: 'pointer' }}
+      >
+        <td>
+          <code
+            style={{
+              color: 'var(--gold)',
+              fontSize: '0.8rem',
+            }}
+          >
+            {fraID}
+          </code>
+        </td>
+
+        <td>{fra.fraName || fra.title}</td>
+
+        <td>
+          ${' '}
+          {(fra.targetAmount || fra.target || 0).toLocaleString()}
+        </td>
+
+        <td>{formatDate(fra.endDate || fra.end)}</td>
+
+        <td>
+          <span
+            style={
+              fra.suspended
+                ? {
+                    color: 'var(--error)',
+                    fontSize: '0.8rem',
+                    textTransform: 'uppercase',
+                  }
+                : {
+                    color: 'var(--success)',
+                    fontSize: '0.8rem',
+                    textTransform: 'uppercase',
+                  }
+            }
+          >
+            {fra.suspended ? 'Suspended' : 'Active'}
+          </span>
+        </td>
+
+        <td>{savedCounts[fraID] || 0}</td>
+        <td>{viewCounts[fraID] || 0}</td>
+
+        <td onClick={(e) => e.stopPropagation()}>
+          <button
+            className="action-btn btn-edit"
+            onClick={() => openEditForm(fra)}
+          >
+            Edit
+          </button>
+
+          <button
+            className="action-btn btn-suspend"
+            onClick={() => handleSuspendToggle(fraID)}
+          >
+            {fra.suspended ? 'Unsuspend' : 'Suspend'}
+          </button>
+        </td>
+      </tr>
+    );
+  }
+
+  const displayedFRA = FRAs[currentIndex];
 
   if (!user) return null;
 
@@ -410,6 +519,45 @@ export default function FundraiserOngoingFRAPage() {
           </button>
         </div>
 
+        {!isSearchMode && FRAs.length > 1 && (
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '1rem',
+            }}
+          >
+            <span className="subtitle">
+              Showing FRA {currentIndex + 1} of {FRAs.length}
+            </span>
+
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button
+                className="btn-cancel"
+                onClick={goPrevious}
+                disabled={currentIndex === 0}
+              >
+                Previous
+              </button>
+
+              <button
+                className="btn-primary"
+                onClick={goNext}
+                disabled={currentIndex === FRAs.length - 1}
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
+
+        {isSearchMode && FRAs.length > 0 && (
+          <p className="subtitle" style={{ marginBottom: '1rem' }}>
+            Showing {FRAs.length} search result{FRAs.length === 1 ? '' : 's'}
+          </p>
+        )}
+
         <div className="table-wrap">
           <table>
             <thead>
@@ -438,77 +586,10 @@ export default function FundraiserOngoingFRAPage() {
                     No ongoing fundraising activities.
                   </td>
                 </tr>
+              ) : isSearchMode ? (
+                FRAs.map((fra) => renderFRARow(fra))
               ) : (
-                FRAs.map((fra) => {
-                  const fraID = getFRAId(fra);
-
-                  return (
-                    <tr
-                      key={fraID}
-                      onClick={() => openDetails(fra)}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      <td>
-                        <code
-                          style={{
-                            color: 'var(--gold)',
-                            fontSize: '0.8rem',
-                          }}
-                        >
-                          {fraID}
-                        </code>
-                      </td>
-
-                      <td>{fra.fraName || fra.title}</td>
-
-                      <td>
-                        ${' '}
-                        {(fra.targetAmount || fra.target || 0).toLocaleString()}
-                      </td>
-
-                      <td>{formatDate(fra.endDate || fra.end)}</td>
-
-                      <td>
-                        <span
-                          style={
-                            fra.suspended
-                              ? {
-                                  color: 'var(--error)',
-                                  fontSize: '0.8rem',
-                                  textTransform: 'uppercase',
-                                }
-                              : {
-                                  color: 'var(--success)',
-                                  fontSize: '0.8rem',
-                                  textTransform: 'uppercase',
-                                }
-                          }
-                        >
-                          {fra.suspended ? 'Suspended' : 'Active'}
-                        </span>
-                      </td>
-
-                      <td>{savedCounts[fraID] || 0}</td>
-                      <td>{viewCounts[fraID] || 0}</td>
-
-                      <td onClick={(e) => e.stopPropagation()}>
-                        <button
-                          className="action-btn btn-edit"
-                          onClick={() => openEditForm(fra)}
-                        >
-                          Edit
-                        </button>
-
-                        <button
-                          className="action-btn btn-suspend"
-                          onClick={() => handleSuspendToggle(fraID)}
-                        >
-                          {fra.suspended ? 'Unsuspend' : 'Suspend'}
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
+                renderFRARow(displayedFRA)
               )}
             </tbody>
           </table>
