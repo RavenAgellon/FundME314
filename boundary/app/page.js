@@ -10,12 +10,16 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    displayLoginPage();
+  }, []);
+
+  function displayLoginPage() {
     const userString = localStorage.getItem('user');
     if (userString) {
       const user = JSON.parse(userString);
       redirectByRole(user.role);
     }
-  }, []);
+  }
 
   function redirectByRole(role) {
     const map = {
@@ -34,7 +38,13 @@ export default function LoginPage() {
 
   async function handleLogin() {
     setAlert(null);
-    if (!username || !password) { setAlert({ type: 'error', msg: 'Please enter your username and password.' }); return; }
+    if (!username || !password) {
+      setAlert({
+        type: 'error',
+        msg: 'Please enter your username and password.',
+      });
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch('http://localhost:3000/api/auth/login', {
@@ -43,12 +53,21 @@ export default function LoginPage() {
         body: JSON.stringify({ username, password }),
       });
       const data = await res.json();
-      if (!res.ok) { setAlert({ type: 'error', msg: data.message || 'Login failed.' }); return; }
+      if (!res.ok) {
+        setAlert({ type: 'error', msg: data.message || 'Login failed.' });
+        return;
+      }
       localStorage.setItem('user', JSON.stringify(data.user));
-      setAlert({ type: 'success', msg: `Welcome, ${data.user.name}! Redirecting...` });
+      setAlert({
+        type: 'success',
+        msg: `Welcome, ${data.user.name}! Redirecting...`,
+      });
       setTimeout(() => redirectByRole(data.user.role), 800);
     } catch {
-      setAlert({ type: 'error', msg: 'Cannot connect to server. Is it running?' });
+      setAlert({
+        type: 'error',
+        msg: 'Cannot connect to server. Is it running?',
+      });
     } finally {
       setLoading(false);
     }
@@ -68,17 +87,31 @@ export default function LoginPage() {
 
           <div className="form-group">
             <label>Username</label>
-            <input type="text" value={username} onChange={e => setUsername(e.target.value)}
-              placeholder="Enter your username" onKeyDown={e => e.key === 'Enter' && handleLogin()} />
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Enter your username"
+              onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+            />
           </div>
           <div className="form-group">
             <label>Password</label>
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)}
-              placeholder="Enter your password" onKeyDown={e => e.key === 'Enter' && handleLogin()} />
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter your password"
+              onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+            />
           </div>
 
-          <button className="btn-primary" style={{width:'100%', padding:'0.85rem', marginTop:'0.5rem'}}
-            onClick={handleLogin} disabled={loading}>
+          <button
+            className="btn-primary"
+            style={{ width: '100%', padding: '0.85rem', marginTop: '0.5rem' }}
+            onClick={handleLogin}
+            disabled={loading}
+          >
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
 
@@ -90,10 +123,16 @@ export default function LoginPage() {
               { role: 'Fundraiser', u: 'fr1', p: 'fr1' },
               { role: 'Donee', u: 'donee1', p: 'donee1' },
               { role: 'Platform Mgmt', u: 'pm1', p: 'pm1' },
-            ].map(c => (
-              <button key={c.u} className="cred-pill" onClick={() => fillCreds(c.u, c.p)}>
+            ].map((c) => (
+              <button
+                key={c.u}
+                className="cred-pill"
+                onClick={() => fillCreds(c.u, c.p)}
+              >
                 <div className="cred-role">{c.role}</div>
-                <div className="cred-user">{c.u} / {c.p}</div>
+                <div className="cred-user">
+                  {c.u} / {c.p}
+                </div>
               </button>
             ))}
           </div>
