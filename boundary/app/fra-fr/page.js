@@ -1,129 +1,103 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import { requireAuth, apiFetch } from '@/lib/auth';
 
-const API_BASE = 'http://localhost:3000/api/fra';
 const CAT_API_BASE = 'http://localhost:3000/api/fra-category';
-
-async function createFRA(fra) {
-  const res = await fetch(API_BASE, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(fra),
-  });
-
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Error creating FRA');
-  return data.fra;
-}
-
-async function updateFRA(fraID, updates) {
-  const res = await fetch(`${API_BASE}/${fraID}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(updates),
-  });
-
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Error updating FRA');
-  return data.fra;
-}
-
-async function suspendFRA(fraID) {
-  const res = await fetch(`${API_BASE}/${fraID}/suspend`, {
-    method: 'PATCH',
-  });
-
-  const data = await res.json();
-
-  if (!res.ok) {
-    throw new Error(data.message || 'Error updating FRA status');
-  }
-
-  return data;
-}
-
-function formatDate(dateStr) {
-  if (!dateStr) return '';
-  return String(dateStr).slice(0, 10);
-}
-
-function getFRAId(fra) {
-  return fra.fraID || fra.id || fra._id;
-}
-
-function sortByFRAID(fraList) {
-  return [...fraList].sort(
-    (a, b) => Number(getFRAId(a)) - Number(getFRAId(b)),
-  );
-}
-
-function getOngoingFRAs(fraList) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  return fraList.filter((fra) => {
-    const endDateValue = fra.endDate || fra.end;
-    if (!endDateValue) return false;
-
-    const endDate = new Date(endDateValue);
-    endDate.setHours(0, 0, 0, 0);
-
-    return endDate >= today;
-  });
-}
-
-function extractFRAList(data) {
-  if (Array.isArray(data)) return data;
-  if (Array.isArray(data.fraList)) return data.fraList;
-  if (Array.isArray(data.fras)) return data.fras;
-  if (data.fra) return [data.fra];
-  if (data.FRA) return [data.FRA];
-  if (data.fraData) return [data.fraData];
-  if (data.fraID || data._id || data.id) return [data];
-
-  return [];
-}
 
 export default function FundraiserOngoingFRAPage() {
   const router = useRouter();
+
   const [user, setUser] = useState(null);
-
-  const [FRAs, setFRAs] = useState([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isSearchMode, setIsSearchMode] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [FRAs, setFRAs] = useState([]);
   const [search, setSearch] = useState('');
-
+  const [selectedFRA, setSelectedFRA] = useState(null);
+  const [categories, setCategories] = useState([]);
   const [savedCounts, setSavedCounts] = useState({});
   const [viewCounts, setViewCounts] = useState({});
-  const [categories, setCategories] = useState([]);
 
   const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState(null);
-
-  const [selectedFRA, setSelectedFRA] = useState(null);
-  const [showDetails, setShowDetails] = useState(false);
-
-  const [successMsg, setSuccessMsg] = useState('');
-  const [errorMsg, setErrorMsg] = useState('');
+  const [editingFRA, setEditingFRA] = useState(null);
 
   const [title, setTitle] = useState('');
   const [desc, setDesc] = useState('');
-  const [categoryDesc, setCategoryDesc] = useState('');
   const [category, setCategory] = useState('');
   const [target, setTarget] = useState('');
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
 
-  const [creating, setCreating] = useState(false);
-
   function displayPage() {
     const u = requireAuth('fundraiser');
-    if (u) setUser(u);
+
+    if (u) {
+      setUser(u);
+      viewFRAs();
+      loadCategories();
+    }
+  }
+
+  useEffect(() => {
+    displayPage();
+  }, []);
+
+  async function loadCategories() {
+    try {
+      const res = await fetch(`${CAT_API_BASE}/search`);
+      const data = await res.json();
+      setCategories(Array.isArray(data) ? data : []);
+    } catch {
+      setCategories([]);
+    }
+  }
+
+  function getCategoryDescription(catName) {
+    const selectedCategory = categories.find((cat) => cat.catName === catName);
+    return selectedCategory?.description || '—';
+  }
+
+  function sortByFRAID(list) {
+    return [...list].sort(
+      (a, b) => (Number(a.fraID) || 0) - (Number(b.fraID) || 0),
+    );
+  }
+
+  function getDaysLeft(endDate) {
+    const today = new Date();
+    const deadline = new Date(endDate);
+    const diff = deadline.getTime() - today.getTime();
+    return Math.ceil(diff / (1000 * 60 * 60 * 24));
+  }
+
+  function getFRAList(data) {
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data.fraList)) return data.fraList;
+    if (Array.isArray(data.fras)) return data.fras;
+    if (data.fra) return [data.fra];
+    return [];
+  }
+
+  async function viewFRAs() {
+    setLoading(true);
+
+    try {
+      const res = await apiFetch('/api/fra/view', 'GET');
+      const data = await res.json();
+
+      const ongoingFRAs = sortByFRAID(
+        getFRAList(data).filter((fra) => new Date(fra.endDate) >= new Date()),
+      );
+
+      setFRAs(ongoingFRAs);
+      await fetchSavedCounts();
+      await fetchViewCounts(ongoingFRAs);
+    } catch {
+      setFRAs([]);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function fetchSavedCounts() {
@@ -132,7 +106,6 @@ export default function FundraiserOngoingFRAPage() {
       const data = await res.json();
 
       const countMap = {};
-
       if (Array.isArray(data)) {
         data.forEach((item) => {
           countMap[item.fraID] = item.savedCount;
@@ -150,15 +123,12 @@ export default function FundraiserOngoingFRAPage() {
 
     await Promise.all(
       fraList.map(async (fra) => {
-        const fraID = getFRAId(fra);
-
         try {
-          const res = await fetch(`${API_BASE}/${fraID}/views`);
+          const res = await apiFetch(`/api/fra/${fra.fraID}/views`, 'GET');
           const data = await res.json();
-
-          viewMap[fraID] = Number(data) || 0;
+          viewMap[fra.fraID] = Number(data) || 0;
         } catch {
-          viewMap[fraID] = fra.viewCount || 0;
+          viewMap[fra.fraID] = fra.viewCount || 0;
         }
       }),
     );
@@ -166,177 +136,73 @@ export default function FundraiserOngoingFRAPage() {
     setViewCounts(viewMap);
   }
 
-  const loadCategories = useCallback(async () => {
+  async function fetchSelectedFRA(fraID) {
     try {
-      const res = await fetch(`${CAT_API_BASE}/search`);
+      const res = await apiFetch(`/api/fra/${fraID}/view`, 'GET');
       const data = await res.json();
-
-      const categoryList = Array.isArray(data) ? data : [];
-      setCategories(categoryList.filter((cat) => !cat.suspended));
+      setSelectedFRA(data);
     } catch {
-      setCategories([]);
+      setSelectedFRA(null);
     }
-  }, []);
-
-  const loadFRAs = useCallback(async () => {
-    setLoading(true);
-    setErrorMsg('');
-    setIsSearchMode(false);
-
-    try {
-      let res = await fetch(`${API_BASE}/fundraiser/view`);
-      let data = await res.json();
-
-      if (!res.ok) {
-        res = await fetch(`${API_BASE}/fundraiser/all`);
-        data = await res.json();
-      }
-
-      if (!res.ok) {
-        throw new Error(data.message || 'Failed to load ongoing FRAs');
-      }
-
-      const fraList = extractFRAList(data);
-      const ongoingFRAs = sortByFRAID(getOngoingFRAs(fraList));
-
-      setFRAs(ongoingFRAs);
-      setCurrentIndex(0);
-
-      await fetchSavedCounts();
-      await fetchViewCounts(ongoingFRAs);
-    } catch (error) {
-      setFRAs([]);
-      setCurrentIndex(0);
-      setErrorMsg(error.message || 'Failed to load ongoing FRAs');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    displayPage();
-    loadFRAs();
-    loadCategories();
-  }, [loadFRAs, loadCategories]);
-
-  useEffect(() => {
-    if (showForm || showDetails) {
-      document.body.classList.add('modal-open');
-    } else {
-      document.body.classList.remove('modal-open');
-    }
-
-    return () => document.body.classList.remove('modal-open');
-  }, [showForm, showDetails]);
+  }
+  
 
   async function searchFRA() {
     if (!search.trim()) {
-      loadFRAs();
+      viewFRAs();
       return;
     }
 
     setLoading(true);
-    setErrorMsg('');
-    setIsSearchMode(true);
 
     try {
-      const res = await fetch(
-        `${API_BASE}/fundraiser/search?fraName=${encodeURIComponent(search)}`,
+      const res = await apiFetch(
+        '/api/fra/fundraiser/search?fraName=' + encodeURIComponent(search),
+        'GET',
       );
 
       const data = await res.json();
 
-      if (!res.ok) {
-        throw new Error(data.message || 'Failed to search FRA');
-      }
-
-      const searchedFRAs = extractFRAList(data);
-      const ongoingFRAs = sortByFRAID(getOngoingFRAs(searchedFRAs));
+      const ongoingFRAs = sortByFRAID(
+        getFRAList(data).filter((fra) => new Date(fra.endDate) >= new Date()),
+      );
 
       setFRAs(ongoingFRAs);
-      setCurrentIndex(0);
-
       await fetchSavedCounts();
       await fetchViewCounts(ongoingFRAs);
-    } catch (error) {
+    } catch {
       setFRAs([]);
-      setCurrentIndex(0);
-      setErrorMsg(error.message || 'Failed to search FRA');
     } finally {
       setLoading(false);
     }
   }
 
-  function getCategoryDescription(catName) {
-    const selectedCategory = categories.find((cat) => cat.catName === catName);
-    return selectedCategory?.description || '—';
-  }
-
-  function handleCategoryChange(catName) {
-    setCategory(catName);
-    setCategoryDesc(getCategoryDescription(catName));
-  }
-
-  function openForm() {
-    setShowForm(true);
-    setShowDetails(false);
-    setEditingId(null);
-
+  function openCreateForm() {
+    setEditingFRA(null);
     setTitle('');
     setDesc('');
     setCategory('');
-    setCategoryDesc('');
     setTarget('');
     setStart('');
     setEnd('');
-
-    setErrorMsg('');
-  }
-
-  function openEditForm(fra) {
     setShowForm(true);
-    setShowDetails(false);
-
-    setEditingId(getFRAId(fra));
-    setTitle(fra.fraName || fra.title || '');
-    setDesc(fra.description || '');
-    setCategory(fra.category || '');
-    setCategoryDesc(getCategoryDescription(fra.category));
-
-    setTarget(fra.targetAmount?.toString() || fra.target?.toString() || '');
-    setStart(formatDate(fra.startDate || fra.start));
-    setEnd(formatDate(fra.endDate || fra.end));
-
-    setErrorMsg('');
   }
 
-  function openDetails(fra) {
-    setSelectedFRA(fra);
-    setShowDetails(true);
-    setShowForm(false);
-    setErrorMsg('');
+  function openEditForm(FRA) {
+    setEditingFRA(FRA);
+    setTitle(FRA.fraName || '');
+    setDesc(FRA.description || '');
+    setCategory(FRA.category || '');
+    setTarget(FRA.targetAmount || '');
+    setStart(FRA.startDate ? String(FRA.startDate).slice(0, 10) : '');
+    setEnd(FRA.endDate ? String(FRA.endDate).slice(0, 10) : '');
+    setShowForm(true);
   }
 
-  function closeDetails() {
-    setSelectedFRA(null);
-    setShowDetails(false);
-  }
-
-  function goPrevious() {
-    setCurrentIndex((prev) => Math.max(prev - 1, 0));
-  }
-
-  function goNext() {
-    setCurrentIndex((prev) => Math.min(prev + 1, FRAs.length - 1));
-  }
-
-  async function handleCreate(e) {
+  async function saveFRA(e) {
     e.preventDefault();
 
-    setCreating(true);
-    setErrorMsg('');
-
-    const fraData = {
+    const payload = {
       fraName: title,
       description: desc,
       category,
@@ -346,120 +212,65 @@ export default function FundraiserOngoingFRAPage() {
     };
 
     try {
-      if (editingId !== null) {
-        await updateFRA(editingId, fraData);
-        setSuccessMsg('FRA updated');
+      let res;
+
+      if (editingFRA) {
+        res = await apiFetch(`/api/fra/${editingFRA.fraID}`, 'PUT', payload);
       } else {
-        await createFRA(fraData);
-        setSuccessMsg('FRA created');
+        res = await apiFetch('/api/fra', 'POST', payload);
       }
 
-      await loadFRAs();
+      const data = await res.json();
+
+      alert(data.message || (editingFRA ? 'FRA updated' : 'FRA created'));
 
       setShowForm(false);
-      setEditingId(null);
-    } catch (error) {
-      setErrorMsg(error.message);
+      setEditingFRA(null);
+      viewFRAs();
+    } catch {
+      alert(editingFRA ? 'Failed to update FRA.' : 'Failed to create FRA.');
     }
-
-    setCreating(false);
-    setTimeout(() => setSuccessMsg(''), 2200);
   }
 
-  async function handleSuspendToggle(id) {
-    setErrorMsg('');
+  async function toggleSuspendFRA(fraID, suspended) {
+    if (
+      !confirm(
+        `Are you sure you want to ${suspended ? 'unsuspend' : 'suspend'} this FRA?`,
+      )
+    )
+      return;
 
     try {
-      const result = await suspendFRA(id);
+      const res = await apiFetch(`/api/fra/${fraID}/suspend`, 'PATCH');
+      const data = await res.json();
 
-      setSuccessMsg(result.message);
-
-      await loadFRAs();
-
-      setTimeout(() => setSuccessMsg(''), 2200);
-    } catch (error) {
-      setErrorMsg(error.message);
+      alert(data.message || 'FRA status updated');
+      viewFRAs();
+    } catch {
+      alert('Failed to update FRA status.');
     }
   }
 
-  function handleCancel() {
-    setShowForm(false);
-    setEditingId(null);
-    setErrorMsg('');
+  function badgeStyle(status) {
+    const map = {
+      active: '#5FD3BC',
+      suspended: '#FF6B81',
+    };
+
+    const color = map[status] || '#9999BB';
+
+    return {
+      background: `${color}22`,
+      color,
+      display: 'inline-block',
+      padding: '2px 10px',
+      borderRadius: '20px',
+      fontSize: '0.7rem',
+      fontWeight: 500,
+      textTransform: 'uppercase',
+      letterSpacing: '0.5px',
+    };
   }
-
-  function renderFRARow(fra) {
-    const fraID = getFRAId(fra);
-
-    return (
-      <tr
-        key={fraID}
-        onClick={() => openDetails(fra)}
-        style={{ cursor: 'pointer' }}
-      >
-        <td>
-          <code
-            style={{
-              color: 'var(--gold)',
-              fontSize: '0.8rem',
-            }}
-          >
-            {fraID}
-          </code>
-        </td>
-
-        <td>{fra.fraName || fra.title}</td>
-
-        <td>
-          ${' '}
-          {(fra.targetAmount || fra.target || 0).toLocaleString()}
-        </td>
-
-        <td>{formatDate(fra.endDate || fra.end)}</td>
-
-        <td>
-          <span
-            style={
-              fra.suspended
-                ? {
-                    color: 'var(--error)',
-                    fontSize: '0.8rem',
-                    textTransform: 'uppercase',
-                  }
-                : {
-                    color: 'var(--success)',
-                    fontSize: '0.8rem',
-                    textTransform: 'uppercase',
-                  }
-            }
-          >
-            {fra.suspended ? 'Suspended' : 'Active'}
-          </span>
-        </td>
-
-        <td>{savedCounts[fraID] || 0}</td>
-        <td>{viewCounts[fraID] || 0}</td>
-
-        <td onClick={(e) => e.stopPropagation()}>
-          <button
-            className="action-btn btn-edit"
-            onClick={() => openEditForm(fra)}
-          >
-            Edit
-          </button>
-
-          <button
-            className="action-btn btn-suspend"
-            onClick={() => handleSuspendToggle(fraID)}
-          >
-            {fra.suspended ? 'Unsuspend' : 'Suspend'}
-          </button>
-        </td>
-      </tr>
-    );
-  }
-
-  const displayedFRA = FRAs[currentIndex];
 
   if (!user) return null;
 
@@ -468,40 +279,20 @@ export default function FundraiserOngoingFRAPage() {
       <Navbar role="Fundraiser" username={user.name} />
 
       <div className="page">
-        <span
-          className="back-link"
-          onClick={() => router.push('/dashboard-fr')}
-        >
+        <span className="back-link" onClick={() => router.push('/dashboard-fr')}>
           ← Back to Dashboard
         </span>
 
         <h2>Ongoing Fundraising Activities</h2>
+
         <p className="subtitle">
           Create, search, view and manage ongoing fundraising activities.
         </p>
 
-        {successMsg && (
-          <div className="alert success" style={{ marginBottom: 16 }}>
-            {successMsg}
-          </div>
-        )}
-
-        {errorMsg && (
-          <div className="alert error" style={{ marginBottom: 16 }}>
-            {errorMsg}
-          </div>
-        )}
-
-        <div
-          className="toolbar"
-          style={{
-            marginBottom: '2rem',
-            gap: '0.75rem',
-            flexWrap: 'wrap',
-          }}
-        >
+        <div className="toolbar">
           <div className="search-wrap" style={{ display: 'flex' }}>
             <span className="search-icon">🔍</span>
+
             <input
               type="text"
               value={search}
@@ -509,54 +300,20 @@ export default function FundraiserOngoingFRAPage() {
               onKeyDown={(e) => e.key === 'Enter' && searchFRA()}
               placeholder="Search by FRA name"
             />
-            <button className="btn-primary" onClick={searchFRA}>
+
+            <button
+              className="btn-primary"
+              onClick={searchFRA}
+              style={{ marginLeft: '1rem' }}
+            >
               Search
             </button>
           </div>
 
-          <button className="btn-primary" onClick={openForm}>
+          <button className="btn-primary" onClick={openCreateForm}>
             ➕ New Fundraising Activity
           </button>
         </div>
-
-        {!isSearchMode && FRAs.length > 1 && (
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '1rem',
-            }}
-          >
-            <span className="subtitle">
-              Showing FRA {currentIndex + 1} of {FRAs.length}
-            </span>
-
-            <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <button
-                className="btn-cancel"
-                onClick={goPrevious}
-                disabled={currentIndex === 0}
-              >
-                Previous
-              </button>
-
-              <button
-                className="btn-primary"
-                onClick={goNext}
-                disabled={currentIndex === FRAs.length - 1}
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        )}
-
-        {isSearchMode && FRAs.length > 0 && (
-          <p className="subtitle" style={{ marginBottom: '1rem' }}>
-            Showing {FRAs.length} search result{FRAs.length === 1 ? '' : 's'}
-          </p>
-        )}
 
         <div className="table-wrap">
           <table>
@@ -586,10 +343,71 @@ export default function FundraiserOngoingFRAPage() {
                     No ongoing fundraising activities.
                   </td>
                 </tr>
-              ) : isSearchMode ? (
-                FRAs.map((fra) => renderFRARow(fra))
               ) : (
-                renderFRARow(displayedFRA)
+                FRAs.map((FRA) => (
+                  <tr key={FRA.fraID}>
+                    <td>
+                      <code style={{ color: 'var(--gold)', fontSize: '0.8rem' }}>
+                        {FRA.fraID || '—'}
+                      </code>
+                    </td>
+
+                    <td>
+                      <span
+                        onClick={() => fetchSelectedFRA(FRA.fraID)}
+                        style={{
+                          cursor: 'pointer',
+                          color: 'var(--text)',
+                          borderBottom: '1px dashed var(--muted)',
+                          paddingBottom: '1px',
+                        }}
+                      >
+                        {FRA.fraName || '—'}
+                      </span>
+                    </td>
+
+                    <td>$ {(FRA.targetAmount || 0).toLocaleString()}</td>
+
+                    <td>{`${getDaysLeft(FRA.endDate)} days left`}</td>
+
+                    <td>
+                      <span
+                        style={badgeStyle(
+                          FRA.suspended ? 'suspended' : 'active',
+                        )}
+                      >
+                        {FRA.suspended ? 'Suspended' : 'Active'}
+                      </span>
+                    </td>
+
+                    <td>{savedCounts[FRA.fraID] || 0}</td>
+
+                    <td>{viewCounts[FRA.fraID] || 0}</td>
+
+                    <td>
+                      <button
+                        className="action-btn btn-edit"
+                        onClick={() => openEditForm(FRA)}
+                      >
+                        Edit
+                      </button>
+
+                      <button
+                        className={
+                          FRA.suspended
+                            ? 'action-btn btn-unsuspend'
+                            : 'action-btn btn-suspend'
+                        }
+                        onClick={() =>
+                          toggleSuspendFRA(FRA.fraID, FRA.suspended)
+                        }
+                        style={{ marginLeft: '0.4rem' }}
+                      >
+                        {FRA.suspended ? 'Unsuspend' : 'Suspend'}
+                      </button>
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
@@ -599,32 +417,20 @@ export default function FundraiserOngoingFRAPage() {
       {showForm && (
         <div
           className="modal-overlay active"
-          onClick={(e) => e.target === e.currentTarget && handleCancel()}
+          onClick={(e) => e.target === e.currentTarget && setShowForm(false)}
         >
-          <div className="modal" style={{ maxWidth: 540 }}>
-            <h3 style={{ marginBottom: '1.25rem' }}>
-              {editingId !== null
-                ? 'Edit Fundraising Activity'
-                : 'Create Fundraising Activity'}
-            </h3>
+          <div className="modal">
+            <h3>{editingFRA ? 'Edit Fundraising Activity' : 'Create Fundraising Activity'}</h3>
 
-            <form onSubmit={handleCreate}>
+            <form onSubmit={saveFRA}>
               <div className="form-group">
-                <label>Title</label>
-                <input
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  required
-                />
+                <label>FRA Name</label>
+                <input value={title} onChange={(e) => setTitle(e.target.value)} required />
               </div>
 
               <div className="form-group">
                 <label>Category</label>
-                <select
-                  value={category}
-                  onChange={(e) => handleCategoryChange(e.target.value)}
-                  required
-                >
+                <select value={category} onChange={(e) => setCategory(e.target.value)} required>
                   <option value="">Select a category</option>
                   {categories.map((cat) => (
                     <option key={cat.catName} value={cat.catName}>
@@ -636,76 +442,36 @@ export default function FundraiserOngoingFRAPage() {
 
               <div className="form-group">
                 <label>Category Description</label>
-                <textarea
-                  value={categoryDesc}
-                  readOnly
-                  placeholder="Category description will appear here"
-                />
+                <input value={getCategoryDescription(category)} readOnly />
               </div>
 
               <div className="form-group">
-                <label>FRA Description</label>
-                <textarea
-                  value={desc}
-                  onChange={(e) => setDesc(e.target.value)}
-                  required
-                />
+                <label>Description</label>
+                <textarea value={desc} onChange={(e) => setDesc(e.target.value)} required />
               </div>
 
               <div className="form-group">
                 <label>Target Amount</label>
-                <input
-                  type="number"
-                  value={target}
-                  onChange={(e) => setTarget(e.target.value)}
-                  required
-                />
+                <input type="number" value={target} onChange={(e) => setTarget(e.target.value)} required />
               </div>
 
               <div className="form-group">
                 <label>Start Date</label>
-                <input
-                  type="date"
-                  value={start}
-                  onChange={(e) => setStart(e.target.value)}
-                  required
-                />
+                <input type="date" value={start} onChange={(e) => setStart(e.target.value)} required />
               </div>
 
               <div className="form-group">
                 <label>End Date</label>
-                <input
-                  type="date"
-                  value={end}
-                  onChange={(e) => setEnd(e.target.value)}
-                  required
-                />
+                <input type="date" value={end} onChange={(e) => setEnd(e.target.value)} required />
               </div>
 
-              <div
-                className="modal-actions"
-                style={{ justifyContent: 'space-between' }}
-              >
-                <button
-                  type="button"
-                  className="btn-cancel"
-                  onClick={handleCancel}
-                >
+              <div className="modal-actions">
+                <button type="button" className="btn-cancel" onClick={() => setShowForm(false)}>
                   Cancel
                 </button>
 
-                <button
-                  type="submit"
-                  className="btn-primary"
-                  disabled={creating}
-                >
-                  {creating
-                    ? editingId !== null
-                      ? 'Updating...'
-                      : 'Creating...'
-                    : editingId !== null
-                      ? 'Update'
-                      : 'Create'}
+                <button type="submit" className="btn-primary">
+                  {editingFRA ? 'Update' : 'Create'}
                 </button>
               </div>
             </form>
@@ -713,62 +479,43 @@ export default function FundraiserOngoingFRAPage() {
         </div>
       )}
 
-      {showDetails && selectedFRA && (
+      {selectedFRA && (
         <div
           className="modal-overlay active"
-          onClick={(e) => e.target === e.currentTarget && closeDetails()}
+          onClick={(e) => e.target === e.currentTarget && setSelectedFRA(null)}
         >
           <div className="modal">
             <h3>FRA Details</h3>
 
-            <div
-              style={{
-                display: 'grid',
-                gap: '0.75rem',
-                marginBottom: '1.25rem',
-              }}
-            >
+            <div style={{ display: 'grid', gap: '0.75rem', marginBottom: '1.25rem' }}>
               {[
-                { label: 'FRA ID', value: getFRAId(selectedFRA) },
-                {
-                  label: 'Name',
-                  value: selectedFRA.fraName || selectedFRA.title || '—',
-                },
-                {
-                  label: 'Category',
-                  value: selectedFRA.category || '—',
-                },
+                { label: 'FRA ID', value: selectedFRA.fraID || '—' },
+                { label: 'Name', value: selectedFRA.fraName || '—' },
+                { label: 'Category', value: selectedFRA.category || '—' },
                 {
                   label: 'Category Description',
                   value: getCategoryDescription(selectedFRA.category),
                 },
-                {
-                  label: 'FRA Description',
-                  value: selectedFRA.description || '—',
-                },
+                { label: 'Description', value: selectedFRA.description || '—' },
                 {
                   label: 'Target Amount',
-                  value: `$ ${(selectedFRA.targetAmount || selectedFRA.target || 0).toLocaleString()}`,
+                  value: `$ ${(selectedFRA.targetAmount || 0).toLocaleString()}`,
                 },
                 {
                   label: 'Start Date',
-                  value: formatDate(selectedFRA.startDate || selectedFRA.start),
+                  value: new Date(selectedFRA.startDate).toLocaleDateString(),
                 },
                 {
                   label: 'End Date',
-                  value: formatDate(selectedFRA.endDate || selectedFRA.end),
-                },
-                {
-                  label: 'Status',
-                  value: selectedFRA.suspended ? 'Suspended' : 'Active',
+                  value: new Date(selectedFRA.endDate).toLocaleDateString(),
                 },
                 {
                   label: 'Saved Count',
-                  value: savedCounts[getFRAId(selectedFRA)] || 0,
+                  value: savedCounts[selectedFRA.fraID] || 0,
                 },
                 {
                   label: 'View Count',
-                  value: viewCounts[getFRAId(selectedFRA)] || 0,
+                  value: viewCounts[selectedFRA.fraID] || 0,
                 },
               ].map((row) => (
                 <div
@@ -776,7 +523,6 @@ export default function FundraiserOngoingFRAPage() {
                   style={{
                     display: 'flex',
                     justifyContent: 'space-between',
-                    alignItems: 'flex-start',
                     borderBottom: '1px solid rgba(255,255,255,0.05)',
                     paddingBottom: '0.6rem',
                     gap: '1rem',
@@ -789,9 +535,6 @@ export default function FundraiserOngoingFRAPage() {
                       textTransform: 'uppercase',
                       letterSpacing: '0.6px',
                       fontWeight: 500,
-                      display: 'block',
-                      minWidth: '140px',
-                      flexShrink: 0,
                     }}
                   >
                     {row.label}
@@ -803,10 +546,7 @@ export default function FundraiserOngoingFRAPage() {
                       color: 'var(--text)',
                       textAlign: 'right',
                       maxWidth: '60%',
-                      lineHeight: 1.5,
                       overflowWrap: 'anywhere',
-                      wordBreak: 'break-word',
-                      display: 'block',
                     }}
                   >
                     {row.value}
@@ -815,22 +555,10 @@ export default function FundraiserOngoingFRAPage() {
               ))}
             </div>
 
-            <div
-              className="modal-actions"
-              style={{ justifyContent: 'space-between' }}
-            >
-              <button className="btn-cancel" onClick={closeDetails}>
+            <div className="modal-actions">
+              <button className="btn-cancel" onClick={() => setSelectedFRA(null)}>
                 Close
               </button>
-
-              {!selectedFRA.suspended && (
-                <button
-                  className="btn-primary"
-                  onClick={() => openEditForm(selectedFRA)}
-                >
-                  Edit
-                </button>
-              )}
             </div>
           </div>
         </div>
