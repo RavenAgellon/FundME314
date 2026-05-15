@@ -133,7 +133,9 @@ export default function FundraiserCompletedFRAPage() {
     setErrorMsg('');
 
     try {
-      let res = await fetch(`${API_BASE}/fundraiser/view`);
+      // Calls ViewAllCompletedFRACon controller to retrieve all completed FRAs
+      let res = await fetch(`${API_BASE}/donee/completed/view`); 
+
       let data = await res.json();
 
       if (!res.ok) {
@@ -184,7 +186,8 @@ export default function FundraiserCompletedFRAPage() {
 
     try {
       const res = await fetch(
-        `${API_BASE}/fundraiser/search?fraName=${encodeURIComponent(search)}`,
+        // Use completed FRA search controller route
+        `${API_BASE}/fundraiser/completed?fraName=${encodeURIComponent(search)}`,
       );
 
       const data = await res.json();
