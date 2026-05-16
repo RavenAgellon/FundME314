@@ -95,6 +95,9 @@ export default function PlatformFRACategories() {
     if (!payload.catName) {
       setFormError('Category name is required');
       return false;
+    } else if (!payload.description) {
+      setFormError('Description is required');
+      return false;
     }
 
     try {
@@ -124,6 +127,9 @@ export default function PlatformFRACategories() {
 
     if (!payload.catName) {
       setFormError('Category name is required');
+      return false;
+    } else if (!payload.description) {
+      setFormError('Description is required');
       return false;
     }
 
