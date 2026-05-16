@@ -36,7 +36,7 @@ export default function PlatformFRACategories() {
   async function fetchCategories() {
     setLoading(true);
     try {
-      const res = await apiFetch('/api/fra-category/search', 'GET');
+      const res = await apiFetch('/api/fra-category/', 'GET');
       const data = await res.json();
       setCategories(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -73,7 +73,10 @@ export default function PlatformFRACategories() {
 
     setLoading(true);
     try {
-      const res = await apiFetch('/api/fra-category/search?catName=' + encodeURIComponent(search), 'GET');
+      const res = await apiFetch(
+        '/api/fra-category/search?catName=' + encodeURIComponent(search),
+        'GET',
+      );
       const data = await res.json();
       setCategories(Array.isArray(data) ? data : []);
     } catch {
@@ -86,7 +89,7 @@ export default function PlatformFRACategories() {
   async function createCategory() {
     const payload = {
       catName: catName.trim(),
-      description: description || ''
+      description: description || '',
     };
 
     if (!payload.catName) {
@@ -116,7 +119,7 @@ export default function PlatformFRACategories() {
   async function updateCategory() {
     const payload = {
       catName: catName.trim(),
-      description: description || ''
+      description: description || '',
     };
 
     if (!payload.catName) {
@@ -126,7 +129,11 @@ export default function PlatformFRACategories() {
 
     try {
       setFormError('');
-      const res = await apiFetch(`/api/fra-category/${encodeURIComponent(originalName)}`, 'PUT', payload);
+      const res = await apiFetch(
+        `/api/fra-category/${encodeURIComponent(originalName)}`,
+        'PUT',
+        payload,
+      );
       const data = await res.json();
 
       if (data && (data === true || data.success)) {
@@ -165,7 +172,10 @@ export default function PlatformFRACategories() {
   //  suspend or unsuspend category based on current state
   async function suspendCategory(cat) {
     try {
-      const res = await apiFetch(`/api/fra-category/${encodeURIComponent(cat.catName)}/suspend`, 'PATCH');
+      const res = await apiFetch(
+        `/api/fra-category/${encodeURIComponent(cat.catName)}/suspend`,
+        'PATCH',
+      );
       const data = await res.json();
     } catch (err) {
       // silently handle errors
@@ -178,7 +188,7 @@ export default function PlatformFRACategories() {
   function viewCategoryDescription(cat) {
     setViewFraList({
       catName: cat.catName,
-      description: cat.description || 'No description available.'
+      description: cat.description || 'No description available.',
     });
   }
 
@@ -188,17 +198,42 @@ export default function PlatformFRACategories() {
     <>
       <Navbar role="Platform Mgmt" username={user.name} />
       <div className="page">
-        <span className="back-link" onClick={() => router.push('/dashboard-platform')}>← Back to Dashboard</span>
+        <span
+          className="back-link"
+          onClick={() => router.push('/dashboard-platform')}
+        >
+          ← Back to Dashboard
+        </span>
         <h2>FRA Category Management</h2>
-        <p className="subtitle">Create, view, update, suspend and search Fundraising Activity categories.</p>
+        <p className="subtitle">
+          Create, view, update, suspend and search Fundraising Activity
+          categories.
+        </p>
 
-        <div className="toolbar" style={{ marginBottom: '0.75rem', justifyContent: 'flex-start', gap: '0.75rem' }}>
+        <div
+          className="toolbar"
+          style={{
+            marginBottom: '0.75rem',
+            justifyContent: 'flex-start',
+            gap: '0.75rem',
+          }}
+        >
           <div className="search-wrap" style={{ display: 'flex' }}>
             <span className="search-icon">🔍</span>
-            <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && searchCategory()} placeholder="Search categories" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && searchCategory()}
+              placeholder="Search categories"
+            />
           </div>
-          <button className="btn-primary" onClick={searchCategory}>Search</button>
-          <button className="btn-primary" onClick={openCreateModal}>+ Create Category</button>
+          <button className="btn-primary" onClick={searchCategory}>
+            Search
+          </button>
+          <button className="btn-primary" onClick={openCreateModal}>
+            + Create Category
+          </button>
         </div>
 
         <div className="table-wrap">
@@ -213,24 +248,56 @@ export default function PlatformFRACategories() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={3} className="loading-cell">Loading...</td>
+                  <td colSpan={3} className="loading-cell">
+                    Loading...
+                  </td>
                 </tr>
               ) : categories.length === 0 ? (
                 <tr>
-                  <td colSpan={3} className="empty-state">No categories found.</td>
+                  <td colSpan={3} className="empty-state">
+                    No categories found.
+                  </td>
                 </tr>
               ) : (
                 categories.map((cat) => (
-                  <tr key={cat.catName} onClick={() => viewCategoryDescription(cat)} style={{ cursor: 'pointer' }}>
+                  <tr
+                    key={cat.catName}
+                    onClick={() => viewCategoryDescription(cat)}
+                    style={{ cursor: 'pointer' }}
+                  >
                     <td style={{ fontWeight: 600 }}>{cat.catName}</td>
                     <td>
-                      <span style={cat.suspended ? { color: 'var(--error)', fontSize: '0.8rem', textTransform: 'uppercase' } : { color: 'var(--success)', fontSize: '0.8rem', textTransform: 'uppercase' }}>
+                      <span
+                        style={
+                          cat.suspended
+                            ? {
+                                color: 'var(--error)',
+                                fontSize: '0.8rem',
+                                textTransform: 'uppercase',
+                              }
+                            : {
+                                color: 'var(--success)',
+                                fontSize: '0.8rem',
+                                textTransform: 'uppercase',
+                              }
+                        }
+                      >
                         {cat.suspended ? 'Suspended' : 'Active'}
                       </span>
                     </td>
                     <td onClick={(e) => e.stopPropagation()}>
-                      <button className="action-btn btn-edit" onClick={() => startEdit(cat)}>Edit</button>
-                      <button className="action-btn btn-suspend" onClick={() => suspendCategory(cat)}>{cat.suspended ? 'Unsuspend' : 'Suspend'}</button>
+                      <button
+                        className="action-btn btn-edit"
+                        onClick={() => startEdit(cat)}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        className="action-btn btn-suspend"
+                        onClick={() => suspendCategory(cat)}
+                      >
+                        {cat.suspended ? 'Unsuspend' : 'Suspend'}
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -240,57 +307,107 @@ export default function PlatformFRACategories() {
         </div>
       </div>
 
-        {/* Create / Edit Category Modal */}
-        {showCreateModal && (
-          <div className="modal-overlay active" onClick={(e) => e.target === e.currentTarget && closeCategoryModal()}>
-            <div className="modal">
-              <h3>{editing ? 'Update Category' : 'Create Category'}</h3>
+      {/* Create / Edit Category Modal */}
+      {showCreateModal && (
+        <div
+          className="modal-overlay active"
+          onClick={(e) => e.target === e.currentTarget && closeCategoryModal()}
+        >
+          <div className="modal">
+            <h3>{editing ? 'Update Category' : 'Create Category'}</h3>
 
-              <form onSubmit={handleCategorySubmit} style={{ marginTop: '0.5rem' }}>
-                <div className="form-group">
-                  <label>Category Name</label>
-                  <input type="text" placeholder="e.g. Education" value={catName} onChange={(e) => setCatName(e.target.value)} />
+            <form
+              onSubmit={handleCategorySubmit}
+              style={{ marginTop: '0.5rem' }}
+            >
+              <div className="form-group">
+                <label>Category Name</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Education"
+                  value={catName}
+                  onChange={(e) => setCatName(e.target.value)}
+                />
+              </div>
+
+              {formError && (
+                <div
+                  style={{
+                    color: 'var(--error)',
+                    marginTop: 6,
+                    marginBottom: 6,
+                    fontSize: '0.9rem',
+                  }}
+                >
+                  {formError}
                 </div>
+              )}
 
-                {formError && (
-                  <div style={{ color: 'var(--error)', marginTop: 6, marginBottom: 6, fontSize: '0.9rem' }}>
-                    {formError}
-                  </div>
-                )}
+              {/* FRA IDs are backend-only and intentionally not shown in the UI */}
 
-                {/* FRA IDs are backend-only and intentionally not shown in the UI */}
+              <div className="form-group">
+                <label>Description</label>
+                <textarea
+                  placeholder="Short description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                />
+              </div>
 
-                <div className="form-group">
-                  <label>Description</label>
-                  <textarea placeholder="Short description" value={description} onChange={(e) => setDescription(e.target.value)} />
-                </div>
-
-                <div className="modal-actions">
-                  <button type="button" className="btn-cancel" onClick={closeCategoryModal}>Cancel</button>
-                  <button className="btn-primary" type="submit">{editing ? 'Update Category' : 'Create Category'}</button>
-                </div>
-              </form>
-            </div>
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  className="btn-cancel"
+                  onClick={closeCategoryModal}
+                >
+                  Cancel
+                </button>
+                <button className="btn-primary" type="submit">
+                  {editing ? 'Update Category' : 'Create Category'}
+                </button>
+              </div>
+            </form>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* View Category Description Modal */}
+      {/* View Category Description Modal */}
       {viewFraList && (
-        <div className="modal-overlay active" onClick={(e) => e.target === e.currentTarget && setViewFraList(null)}>
+        <div
+          className="modal-overlay active"
+          onClick={(e) => e.target === e.currentTarget && setViewFraList(null)}
+        >
           <div className="modal">
             <h3>FRAs in Category "{viewFraList.catName}"</h3>
 
             <div style={{ marginTop: '0.5rem' }}>
-              <div style={{ color: 'var(--muted)', fontSize: '0.9rem', fontWeight: 600 }}>
+              <div
+                style={{
+                  color: 'var(--muted)',
+                  fontSize: '0.9rem',
+                  fontWeight: 600,
+                }}
+              >
                 Category Description:
               </div>
-              <div style={{ color: 'var(--text)', fontSize: '0.95rem', marginTop: '0.5rem' }}>
+              <div
+                style={{
+                  color: 'var(--text)',
+                  fontSize: '0.95rem',
+                  marginTop: '0.5rem',
+                }}
+              >
                 {viewFraList.description}
               </div>
             </div>
 
             <div className="modal-actions">
-              <button className="btn-cancel" onClick={() => setViewFraList(null)}>Close</button>
+              <button
+                className="btn-cancel"
+                onClick={() => setViewFraList(null)}
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>
