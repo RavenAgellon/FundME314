@@ -55,14 +55,39 @@ class updateFRACategoryCon {
   }
 }
 
+class viewAllFRACategoryCon {
+  static async viewAllFRACategory(req, res) {
+    try {
+      const categoryList = await FRACategory.find().sort({ catName: 1 });
+
+      return res.json(categoryList);
+    } catch (err) {
+      return res.json([]);
+    }
+  }
+}
+
 class viewFRACategoryCon {
   static async viewFRACategory(req, res) {
     try {
       const catName = req.params.catName;
-      const fraList = await FRA.find({ category: catName }).sort({ createdAt: -1 });
-      return res.json(fraList);
+
+      const category = await FRACategory.findOne({ catName });
+
+      if (!category) {
+        return res.status(404).json({
+          success: false,
+          message: 'Category not found',
+        });
+      }
+
+      return res.json(category);
     } catch (err) {
-      return res.json([]);
+      return res.status(500).json({
+        success: false,
+        message: 'Server error',
+        error: err.message,
+      });
     }
   }
 }
@@ -124,6 +149,7 @@ class searchFRACategoryCon {
 module.exports = {
   createFRACategoryCon,
   updateFRACategoryCon,
+  viewAllFRACategoryCon,
   viewFRACategoryCon,
   suspendFRACategoryCon,
   searchFRACategoryCon
